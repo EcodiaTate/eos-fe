@@ -415,6 +415,182 @@ export interface ThymosStatsResponse {
   healing_mode: string;
 }
 
+// ─── Oneiros (Dream Engine) Types ────────────────────────────────
+
+export interface OneirosHealthResponse {
+  status: string;
+  current_stage: string;
+  sleep_pressure: number;
+  wake_degradation: number;
+  total_sleep_cycles: number;
+  total_dreams: number;
+  total_insights: number;
+  mean_dream_coherence: number;
+  last_sleep_completed: string | null;
+}
+
+export interface DreamResponse {
+  id: string;
+  dream_type: string;
+  coherence_score: number;
+  coherence_class: string;
+  bridge_narrative: string;
+  affect_valence: number;
+  affect_arousal: number;
+  themes: string[];
+  summary: string;
+  timestamp: string;
+}
+
+export interface DreamInsightResponse {
+  id: string;
+  insight_text: string;
+  coherence_score: number;
+  domain: string;
+  status: string;
+  wake_applications: number;
+  created_at: string;
+}
+
+export interface SleepCycleResponse {
+  id: string;
+  started_at: string;
+  completed_at: string | null;
+  quality: string;
+  episodes_replayed: number;
+  dreams_generated: number;
+  insights_discovered: number;
+  pressure_before: number;
+  pressure_after: number;
+}
+
+export interface OneirosStatsResponse {
+  total_sleep_cycles: number;
+  total_dreams: number;
+  total_insights: number;
+  insights_validated: number;
+  insights_integrated: number;
+  episodes_consolidated: number;
+  semantic_nodes_created: number;
+  traces_pruned: number;
+  affect_traces_processed: number;
+  threats_simulated: number;
+  mean_dream_coherence: number;
+  mean_sleep_quality: number;
+  current_pressure: number;
+  current_stage: string;
+  current_degradation: number;
+}
+
+// ─── Thread (Narrative Identity) Types ───────────────────────────
+
+export interface IdentitySchema {
+  id: string;
+  statement: string;
+  strength: "nascent" | "developing" | "established" | "core";
+  valence: "adaptive" | "maladaptive" | "ambivalent";
+  confirmation_count: number;
+  disconfirmation_count: number;
+  evidence_ratio: number;
+  trigger_contexts: string[];
+  behavioral_tendency: string;
+}
+
+export interface ThreadCommitment {
+  id: string;
+  statement: string;
+  source: "explicit_declaration" | "schema_crystallization" | "crisis_resolution" | "constitutional_grounding";
+  status: "active" | "tested" | "strained" | "broken" | "evolved";
+  tests_faced: number;
+  tests_held: number;
+  fidelity: number;
+  made_at: string | null;
+  last_tested: string | null;
+}
+
+export interface TurningPoint {
+  id: string;
+  chapter_id: string;
+  type: "revelation" | "crisis" | "resolution" | "rupture" | "growth" | "regression";
+  description: string;
+  surprise_magnitude: number;
+  narrative_weight: number;
+}
+
+export interface ThreadIdentityResponse {
+  core_schemas: IdentitySchema[];
+  established_schemas: IdentitySchema[];
+  active_commitments: ThreadCommitment[];
+  current_chapter_title: string;
+  current_chapter_theme: string;
+  life_story_summary: string;
+  key_personality_traits: Record<string, number>;
+  recent_turning_points: TurningPoint[];
+  narrative_coherence: "integrated" | "transitional" | "fragmented" | "conflicted";
+  idem_score: number;
+  ipse_score: number;
+}
+
+export interface ThreadHealthResponse {
+  status: string;
+  total_chapters: number;
+  current_chapter: string;
+  total_schemas: number;
+  total_commitments: number;
+  narrative_coherence: string;
+  idem_score: number;
+  ipse_score: number;
+}
+
+export interface ThreadSchemasResponse {
+  schemas: Record<string, IdentitySchema[]>;
+  total: number;
+  idem_score: number;
+}
+
+export interface ThreadCommitmentsResponse {
+  commitments: ThreadCommitment[];
+  total: number;
+  ipse_score: number;
+  strained: string[];
+}
+
+export interface ThreadCoherenceResponse {
+  fingerprint_count: number;
+  recent_fingerprints: {
+    id: string;
+    epoch: number;
+    window_start: number;
+    window_end: number;
+  }[];
+}
+
+export interface ThreadChapterContextResponse {
+  title: string;
+  theme: string;
+  arc_type: string;
+  episode_count: number;
+  scenes: string[];
+  turning_points: string[];
+  status: string;
+}
+
+export interface ThreadPastSelfResponse {
+  title: string;
+  theme?: string;
+  summary?: string;
+  personality_snapshot?: Record<string, number>;
+  personality_snapshot_start?: Record<string, number>;
+  personality_snapshot_end?: Record<string, number>;
+}
+
+export interface FormCommitmentResponse {
+  commitment_id: string;
+  statement: string;
+  source: string;
+  status: string;
+}
+
 // ─── API Client ──────────────────────────────────────────────────
 
 export const api = {
@@ -495,6 +671,16 @@ export const api = {
     request<HomeostasisResponse>("/api/v1/thymos/homeostasis"),
   thymosStats: () => request<ThymosStatsResponse>("/api/v1/thymos/stats"),
 
+  // Oneiros (Dream Engine)
+  oneirosHealth: () => request<OneirosHealthResponse>("/api/v1/oneiros/health"),
+  oneirosStats: () => request<OneirosStatsResponse>("/api/v1/oneiros/stats"),
+  oneirosRecentDreams: (limit = 50) =>
+    request<DreamResponse[]>(`/api/v1/oneiros/dreams?limit=${limit}`),
+  oneirosInsights: (limit = 50) =>
+    request<DreamInsightResponse[]>(`/api/v1/oneiros/insights?limit=${limit}`),
+  oneirosSleepCycles: (limit = 20) =>
+    request<SleepCycleResponse[]>(`/api/v1/oneiros/sleep-cycles?limit=${limit}`),
+
   // Federation
   federationIdentity: () =>
     request<FederationIdentityResponse>("/api/v1/federation/identity"),
@@ -502,4 +688,25 @@ export const api = {
     request<FederationLinksResponse>("/api/v1/federation/links"),
   federationStats: () =>
     request<Record<string, unknown>>("/api/v1/federation/stats"),
+
+  // Thread (Narrative Identity)
+  threadIdentity: () =>
+    request<ThreadIdentityResponse>("/api/v1/thread/identity"),
+  threadHealth: () =>
+    request<ThreadHealthResponse>("/api/v1/thread/health"),
+  threadCurrentChapter: () =>
+    request<ThreadChapterContextResponse>("/api/v1/thread/chapters/current"),
+  threadSchemas: () =>
+    request<ThreadSchemasResponse>("/api/v1/thread/schemas"),
+  threadCommitments: () =>
+    request<ThreadCommitmentsResponse>("/api/v1/thread/commitments"),
+  threadCoherence: () =>
+    request<ThreadCoherenceResponse>("/api/v1/thread/coherence"),
+  threadFormCommitment: (statement: string, source = "explicit_declaration") =>
+    request<FormCommitmentResponse>("/api/v1/thread/commitments", {
+      method: "POST",
+      body: JSON.stringify({ statement, source }),
+    }),
+  threadPastSelf: (reference = "beginning") =>
+    request<ThreadPastSelfResponse>(`/api/v1/thread/past-self?reference=${encodeURIComponent(reference)}`),
 } as const;

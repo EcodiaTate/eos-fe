@@ -84,6 +84,16 @@ export interface VisualParams {
   particleVelocity: number; // multiplier
 }
 
+// ─── Sleep Stages (from Oneiros) ────────────────────────────────
+
+export type SleepStage =
+  | "wake"
+  | "hypnagogia"
+  | "nrem"
+  | "rem"
+  | "lucid"
+  | "hypnopompia";
+
 // ─── Interaction Modes ───────────────────────────────────────────
 
 export type AliveMode =

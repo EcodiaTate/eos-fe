@@ -3,7 +3,7 @@
  *
  * Central state for the organism visualization. Holds raw affect data,
  * derived visual parameters (smoothed per-frame), rhythm/mode state,
- * and connection status.
+ * Oneiros sleep stage, and connection status.
  *
  * The `tick(delta)` method is called from useFrame on every render frame
  * to smoothly interpolate visual params toward their targets.
@@ -16,6 +16,7 @@ import type {
   CycleCompletedData,
   ModePreset,
   RhythmState,
+  SleepStage,
   SynapseEvent,
   VisualParams,
 } from "@/lib/types";
@@ -102,6 +103,27 @@ function lerpPreset(
   };
 }
 
+/**
+ * Compute the target hue for a given sleep stage.
+ * Returns null when not in a dreaming stage (no override needed).
+ */
+function dreamingHueTarget(stage: SleepStage): number | null {
+  switch (stage) {
+    case "nrem":
+      return 240; // Deep indigo — memory consolidation
+    case "rem":
+      // Oscillate between fuchsia and teal for vivid dreaming
+      return 280 + Math.sin(Date.now() * 0.0005) * 40;
+    case "lucid":
+      return 50; // Golden — self-directed exploration
+    case "hypnagogia":
+    case "hypnopompia":
+      return 260; // Violet — transitional
+    default:
+      return null;
+  }
+}
+
 // ─── Store Interface ──────────────────────────────────────────────
 
 interface AliveState {
@@ -110,6 +132,9 @@ interface AliveState {
   rhythmState: RhythmState;
   cycleCount: number;
   isSafeMode: boolean;
+
+  // Oneiros sleep state (from synapse events)
+  sleepStage: SleepStage;
 
   // Derived visual parameters
   visual: VisualParams;
@@ -147,6 +172,8 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
   rhythmState: "idle" as RhythmState,
   cycleCount: 0,
   isSafeMode: false,
+
+  sleepStage: "wake" as SleepStage,
 
   visual: initialVisual,
   targetVisual: initialVisual,
@@ -192,9 +219,9 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
             deltas.reduce((a, b) => a + b, 0) / deltas.length;
         }
 
-        // Detect mode from rhythm state
+        // Detect mode from rhythm state + current sleep stage
         const rhythmState = (data.rhythm ?? state.rhythmState) as RhythmState;
-        const newMode = detectMode(rhythmState, false, state.isSafeMode);
+        const newMode = detectMode(rhythmState, false, state.isSafeMode, state.sleepStage);
         const modeChanged = newMode !== state.mode;
 
         set({
@@ -207,7 +234,7 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
           broadcastFlash: data.had_broadcast ? 1.0 : state.broadcastFlash,
           // Mode
           ...(modeChanged
-            ? { mode: newMode, targetModePreset: getPreset(newMode) }
+            ? { mode: newMode, targetModePreset: getPreset(newMode, state.sleepStage) }
             : {}),
         });
         break;
@@ -215,12 +242,12 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
 
       case "rhythm_state_changed": {
         const rhythmState = (event.data.to ?? state.rhythmState) as RhythmState;
-        const newMode = detectMode(rhythmState, false, state.isSafeMode);
+        const newMode = detectMode(rhythmState, false, state.isSafeMode, state.sleepStage);
         const modeChanged = newMode !== state.mode;
         set({
           rhythmState,
           ...(modeChanged
-            ? { mode: newMode, targetModePreset: getPreset(newMode) }
+            ? { mode: newMode, targetModePreset: getPreset(newMode, state.sleepStage) }
             : {}),
         });
         break;
@@ -241,6 +268,41 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
       case "coherence_shift":
         // Coherence shifts are reflected through affect state updates
         break;
+
+      case "system_started": {
+        // Oneiros wraps all its events in SYSTEM_STARTED with source "oneiros".
+        // The actual event type lives in data.oneiros_event.
+        const oneirosEvent = event.data.oneiros_event as string | undefined;
+        if (event.source === "oneiros" && oneirosEvent) {
+          const stage = (event.data.stage as string as SleepStage) ?? state.sleepStage;
+
+          switch (oneirosEvent) {
+            case "sleep_stage_changed":
+            case "sleep_onset": {
+              const newMode = detectMode(state.rhythmState, false, state.isSafeMode, stage);
+              const modeChanged = newMode !== state.mode;
+              set({
+                sleepStage: stage,
+                ...(modeChanged
+                  ? { mode: newMode, targetModePreset: getPreset(newMode, stage) }
+                  : { targetModePreset: getPreset(state.mode, stage) }),
+              });
+              break;
+            }
+            case "wake_onset": {
+              const wakeStage: SleepStage = "wake";
+              const newMode = detectMode(state.rhythmState, false, state.isSafeMode, wakeStage);
+              set({
+                sleepStage: wakeStage,
+                mode: newMode,
+                targetModePreset: getPreset(newMode, wakeStage),
+              });
+              break;
+            }
+          }
+        }
+        break;
+      }
     }
   },
 
@@ -257,6 +319,14 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
 
     // Smooth visual params toward target
     const visual = lerpVisual(state.visual, state.targetVisual, rate);
+
+    // Apply dreaming hue override when organism is sleeping
+    if (state.mode === "dreaming" && state.sleepStage !== "wake") {
+      const hueTarget = dreamingHueTarget(state.sleepStage);
+      if (hueTarget !== null) {
+        visual.coreHue = lerpValue(visual.coreHue, hueTarget, rate * 0.3);
+      }
+    }
 
     // Smooth mode preset toward target
     const modePreset = lerpPreset(

@@ -8,10 +8,12 @@ import type {
   CycleTelemetryResponse,
   GoalsResponse,
   HealthResponse,
+  OneirosHealthResponse,
 } from "@/lib/api-client";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/cn";
 
 function StatusBadge({ status }: { status: string }) {
   const variant =
@@ -73,6 +75,80 @@ function SystemCard({
   );
 }
 
+function stageColor(stage: string): string {
+  switch (stage) {
+    case "nrem": return "#818cf8";     // Indigo
+    case "rem": return "#e879f9";      // Fuchsia
+    case "lucid": return "#fbbf24";    // Amber
+    case "hypnagogia": return "#a78bfa"; // Violet
+    case "hypnopompia": return "#fb923c"; // Orange
+    default: return "#38bdf8";           // Sky (wake)
+  }
+}
+
+function OneirosCard({ data }: { data: OneirosHealthResponse | null }) {
+  if (!data) return <div className="text-sm text-white/20">Loading...</div>;
+
+  const isSleeping = data.current_stage !== "wake";
+  const pressure = data.sleep_pressure;
+  const pressureColor =
+    pressure >= 0.95 ? "#ef4444"
+    : pressure >= 0.7 ? "#f59e0b"
+    : pressure >= 0.4 ? "#5eead4"
+    : "#38bdf8";
+
+  return (
+    <div className="space-y-3">
+      {/* Stage indicator */}
+      <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            "h-2.5 w-2.5 rounded-full",
+            isSleeping && "animate-pulse",
+          )}
+          style={{ background: stageColor(data.current_stage) }}
+        />
+        <span className="text-sm text-white/70 font-medium capitalize">
+          {data.current_stage.replace("_", " ")}
+        </span>
+        {isSleeping && (
+          <Badge variant="info" pulse>Sleeping</Badge>
+        )}
+      </div>
+
+      {/* Sleep pressure */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-white/40">Sleep Pressure</span>
+          <span className="text-white/60 tabular-nums">
+            {(pressure * 100).toFixed(0)}%
+          </span>
+        </div>
+        <div className="h-1.5 w-full rounded-full bg-white/[0.05]">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.max(0, Math.min(100, pressure * 100))}%`,
+              background: pressureColor,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Key metrics */}
+      <div className="grid grid-cols-2 gap-3">
+        <Metric label="Dreams" value={data.total_dreams.toString()} />
+        <Metric label="Insights" value={data.total_insights.toString()} />
+        <Metric label="Cycles" value={data.total_sleep_cycles.toString()} />
+        <Metric
+          label="Coherence"
+          value={`${(data.mean_dream_coherence * 100).toFixed(0)}%`}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const health = useApi<HealthResponse>(api.health, { intervalMs: 5000 });
   const affect = useApi<AffectResponse>(api.affect, { intervalMs: 2000 });
@@ -80,6 +156,9 @@ export default function DashboardPage() {
   const beliefs = useApi<BeliefsResponse>(api.beliefs, { intervalMs: 10000 });
   const cycle = useApi<CycleTelemetryResponse>(api.cycleTelemetry, {
     intervalMs: 3000,
+  });
+  const oneiros = useApi<OneirosHealthResponse>(api.oneirosHealth, {
+    intervalMs: 5000,
   });
 
   return (
@@ -299,6 +378,22 @@ export default function DashboardPage() {
             ) : (
               <div className="text-sm text-white/20">Loading...</div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Inner Life (Oneiros) */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>Inner Life</CardTitle>
+            <a
+              href="/dreams"
+              className="text-[10px] text-white/25 hover:text-white/40 transition-colors"
+            >
+              View Dreams →
+            </a>
+          </CardHeader>
+          <CardContent>
+            <OneirosCard data={oneiros.data} />
           </CardContent>
         </Card>
 
