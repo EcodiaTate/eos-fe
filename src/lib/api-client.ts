@@ -323,6 +323,98 @@ export interface MemoryStatsResponse {
   procedure_count: number;
 }
 
+export interface ThymosHealthResponse {
+  status: string;
+  initialized: boolean;
+  healing_mode: string;
+  total_incidents: number;
+  active_incidents: number;
+  mean_resolution_ms: number;
+  incidents_by_severity: Record<string, number>;
+  incidents_by_class: Record<string, number>;
+  total_antibodies: number;
+  mean_antibody_effectiveness: number;
+  antibodies_applied: number;
+  antibodies_created: number;
+  repairs_attempted: number;
+  repairs_succeeded: number;
+  repairs_failed: number;
+  repairs_rolled_back: number;
+  repairs_by_tier: Record<string, number>;
+  total_diagnoses: number;
+  mean_diagnosis_confidence: number;
+  mean_diagnosis_latency_ms: number;
+  homeostatic_adjustments: number;
+  metrics_in_range: number;
+  storm_activations: number;
+  prophylactic_scans: number;
+  prophylactic_warnings: number;
+  budget: Record<string, unknown>;
+}
+
+export interface IncidentResponse {
+  id: string;
+  timestamp: string;
+  source_system: string;
+  incident_class: string;
+  severity: string;
+  error_type: string;
+  error_message: string;
+  repair_status: string;
+  repair_tier: string | null;
+  repair_successful: boolean | null;
+  resolution_time_ms: number | null;
+  root_cause: string | null;
+  antibody_id: string | null;
+}
+
+export interface AntibodyResponse {
+  id: string;
+  fingerprint: string;
+  source_system: string;
+  incident_class: string;
+  repair_tier: string;
+  effectiveness: number;
+  application_count: number;
+  success_count: number;
+  failure_count: number;
+  root_cause: string;
+  created_at: string;
+  last_applied: string | null;
+  retired: boolean;
+  generation: number;
+}
+
+export interface RepairResponse {
+  incident_id: string;
+  timestamp: string;
+  source_system: string;
+  repair_tier: string | null;
+  repair_status: string;
+  repair_successful: boolean | null;
+  resolution_time_ms: number | null;
+  incident_class: string;
+  severity: string;
+  antibody_id: string | null;
+}
+
+export interface HomeostasisResponse {
+  metrics_in_range: number;
+  homeostatic_adjustments: number;
+  healing_mode: string;
+  storm_activations: number;
+}
+
+export interface ThymosStatsResponse {
+  initialized: boolean;
+  total_incidents: number;
+  active_incidents: number;
+  total_diagnoses: number;
+  total_repairs_attempted: number;
+  total_repairs_succeeded: number;
+  healing_mode: string;
+}
+
 // ─── API Client ──────────────────────────────────────────────────
 
 export const api = {
@@ -390,6 +482,18 @@ export const api = {
   simulaHistory: () => request<SimulaHistoryResponse>("/api/v1/simula/history"),
   simulaProposals: () =>
     request<SimulaProposalsResponse>("/api/v1/simula/proposals"),
+
+  // Thymos (Immune System)
+  thymosHealth: () => request<ThymosHealthResponse>("/api/v1/thymos/health"),
+  thymosIncidents: (limit = 50) =>
+    request<IncidentResponse[]>(`/api/v1/thymos/incidents?limit=${limit}`),
+  thymosAntibodies: () =>
+    request<AntibodyResponse[]>("/api/v1/thymos/antibodies"),
+  thymosRepairs: (limit = 50) =>
+    request<RepairResponse[]>(`/api/v1/thymos/repairs?limit=${limit}`),
+  thymosHomeostasis: () =>
+    request<HomeostasisResponse>("/api/v1/thymos/homeostasis"),
+  thymosStats: () => request<ThymosStatsResponse>("/api/v1/thymos/stats"),
 
   // Federation
   federationIdentity: () =>
