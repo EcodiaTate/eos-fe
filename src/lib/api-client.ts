@@ -7,7 +7,7 @@
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
-  "https://ecodiaos-core-929871567697.australia-southeast1.run.app";
+  "https://ecodiaos-core-oeipavsn4a-ts.a.run.app";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;

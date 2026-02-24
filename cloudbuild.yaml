@@ -37,4 +37,4 @@ substitutions:
   _IMAGE: 'australia-southeast1-docker.pkg.dev/ecodiaos/ecodiaos/frontend:latest'
   _SERVICE_NAME: 'ecodiaos-frontend'
   _REGION: 'australia-southeast1'
-  _NEXT_PUBLIC_API_URL: 'https://ecodiaos-core-929871567697.australia-southeast1.run.app'
+  _NEXT_PUBLIC_API_URL: 'https://ecodiaos-core-oeipavsn4a-ts.a.run.app'
