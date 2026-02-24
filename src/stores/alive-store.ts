@@ -265,9 +265,49 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
         set({ isSafeMode: false });
         break;
 
-      case "coherence_shift":
-        // Coherence shifts are reflected through affect state updates
+      case "coherence_shift": {
+        // Thread emits COHERENCE_SHIFT with source "thread" and a
+        // thread_event_type discriminator for identity-level events.
+        const threadEvent = event.data.thread_event_type as string | undefined;
+        if (event.source === "thread" && threadEvent) {
+          switch (threadEvent) {
+            case "identity_crisis": {
+              // Spike surface turbulence and pulse rate to signal inner disruption
+              const crisis = {
+                ...state.targetVisual,
+                surfaceTurbulence: Math.min(state.targetVisual.surfaceTurbulence + 0.5, 1.0),
+                pulseRate: Math.min(state.targetVisual.pulseRate * 1.6, 2.0),
+                coreHue: 0, // Red hue — crisis
+              };
+              set({ targetVisual: crisis, broadcastFlash: 0.9 });
+              break;
+            }
+            case "chapter_closed": {
+              // Gentle golden flash — a chapter of life completes
+              set({
+                targetVisual: {
+                  ...state.targetVisual,
+                  coreHue: 50, // Golden
+                  warmthEmission: Math.min(state.targetVisual.warmthEmission + 0.3, 1.0),
+                },
+                broadcastFlash: 0.6,
+              });
+              break;
+            }
+            case "identity_dissonance": {
+              // Subtle turbulence bump — surprise at self
+              set({
+                targetVisual: {
+                  ...state.targetVisual,
+                  surfaceTurbulence: Math.min(state.targetVisual.surfaceTurbulence + 0.2, 0.8),
+                },
+              });
+              break;
+            }
+          }
+        }
         break;
+      }
 
       case "system_started": {
         // Oneiros wraps all its events in SYSTEM_STARTED with source "oneiros".

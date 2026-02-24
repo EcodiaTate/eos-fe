@@ -9,6 +9,7 @@ import type {
   GoalsResponse,
   HealthResponse,
   OneirosHealthResponse,
+  ThreadHealthResponse,
 } from "@/lib/api-client";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,6 +160,9 @@ export default function DashboardPage() {
   });
   const oneiros = useApi<OneirosHealthResponse>(api.oneirosHealth, {
     intervalMs: 5000,
+  });
+  const thread = useApi<ThreadHealthResponse>(api.threadHealth, {
+    intervalMs: 8000,
   });
 
   return (
@@ -394,6 +398,62 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <OneirosCard data={oneiros.data} />
+          </CardContent>
+        </Card>
+
+        {/* Narrative Identity (Thread) */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>Narrative Identity</CardTitle>
+            <a
+              href="/narrative"
+              className="text-[10px] text-white/25 hover:text-white/40 transition-colors"
+            >
+              View Identity →
+            </a>
+          </CardHeader>
+          <CardContent>
+            {thread.data ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      thread.data.narrative_coherence === "integrated"
+                        ? "success"
+                        : thread.data.narrative_coherence === "fragmented" ||
+                            thread.data.narrative_coherence === "conflicted"
+                          ? "warning"
+                          : "info"
+                    }
+                  >
+                    {thread.data.narrative_coherence}
+                  </Badge>
+                  <span className="text-xs text-white/30 truncate">
+                    {thread.data.current_chapter || "First chapter…"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Metric
+                    label="Idem"
+                    value={`${(thread.data.idem_score * 100).toFixed(0)}%`}
+                  />
+                  <Metric
+                    label="Ipse"
+                    value={`${(thread.data.ipse_score * 100).toFixed(0)}%`}
+                  />
+                  <Metric
+                    label="Schemas"
+                    value={thread.data.total_schemas.toString()}
+                  />
+                  <Metric
+                    label="Chapters"
+                    value={thread.data.total_chapters.toString()}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-white/20">Loading...</div>
+            )}
           </CardContent>
         </Card>
 

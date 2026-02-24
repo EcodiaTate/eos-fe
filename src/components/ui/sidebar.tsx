@@ -5,7 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  BookOpen,
   Brain,
+  Coins,
   Eye,
   GitBranch,
   Globe,
@@ -31,11 +33,13 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Alive", href: "/alive", icon: Sparkles, group: "Core" },
   { label: "Memory", href: "/memory", icon: Search, group: "Cognition" },
   { label: "Dreams", href: "/dreams", icon: Moon, group: "Cognition" },
+  { label: "Narrative", href: "/narrative", icon: BookOpen, group: "Cognition" },
   { label: "Perception", href: "/perception", icon: Eye, group: "Cognition" },
   { label: "Decisions", href: "/decisions", icon: Brain, group: "Cognition" },
   { label: "Governance", href: "/governance", icon: Scale, group: "Systems" },
   { label: "Learning", href: "/learning", icon: Activity, group: "Systems" },
   { label: "Evolution", href: "/evolution", icon: GitBranch, group: "Systems" },
+  { label: "Costs", href: "/costs", icon: Coins, group: "Systems" },
   { label: "Federation", href: "/federation", icon: Globe, group: "Systems" },
 ];
 
@@ -99,7 +103,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-white/[0.06] px-4 py-3">
-        <div className="text-[10px] text-white/15">Phase 11 — Federation</div>
+        <div className="text-[10px] text-white/15">Phase 14 — Narrative Identity</div>
       </div>
     </aside>
   );

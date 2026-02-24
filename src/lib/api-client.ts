@@ -591,6 +591,65 @@ export interface FormCommitmentResponse {
   status: string;
 }
 
+// ─── LLM Metrics Types ──────────────────────────────────────────
+
+export type BudgetTier = "green" | "yellow" | "red";
+
+export interface LLMSystemMetrics {
+  system: string;
+  calls: number;
+  tokens_in: number;
+  tokens_out: number;
+  total_tokens: number;
+  total_cost_usd: number;
+  avg_latency_ms: number;
+  p99_latency_ms: number;
+  cache_hit_rate: number;
+}
+
+export interface LLMBudgetStatus {
+  tier: BudgetTier;
+  tokens_used: number;
+  tokens_remaining: number;
+  calls_made: number;
+  calls_remaining: number;
+  burn_rate_tokens_per_sec: number;
+  hours_until_exhausted: number;
+  warning: string | null;
+}
+
+export interface LLMCacheStats {
+  hit_count: number;
+  miss_count: number;
+  total_requests: number;
+  hit_rate: number;
+}
+
+export interface LLMMetricsResponse {
+  status: string;
+  budget: LLMBudgetStatus;
+  cache: LLMCacheStats;
+  dashboard: {
+    uptime_seconds: number;
+    total: LLMSystemMetrics;
+    by_system: Record<string, LLMSystemMetrics>;
+    cost_projection: {
+      current_cost_usd: number;
+      hourly_cost_usd: number;
+      daily_cost_usd: number;
+    };
+    efficiency: {
+      avg_tokens_per_call: number;
+      avg_latency_ms: number;
+      cache_hit_rate: number;
+    };
+  };
+}
+
+export interface LLMSummaryResponse {
+  summary: string;
+}
+
 // ─── API Client ──────────────────────────────────────────────────
 
 export const api = {
@@ -709,4 +768,8 @@ export const api = {
     }),
   threadPastSelf: (reference = "beginning") =>
     request<ThreadPastSelfResponse>(`/api/v1/thread/past-self?reference=${encodeURIComponent(reference)}`),
+
+  // LLM Cost & Optimization
+  llmMetrics: () => request<LLMMetricsResponse>("/api/v1/admin/llm/metrics"),
+  llmSummary: () => request<LLMSummaryResponse>("/api/v1/admin/llm/summary"),
 } as const;
