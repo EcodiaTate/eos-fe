@@ -11,12 +11,15 @@ import {
   Eye,
   GitBranch,
   Globe,
+  Heart,
   Home,
   MessageCircle,
   Moon,
   Scale,
   Search,
   Sparkles,
+  Crosshair,
+  Terminal,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,7 +43,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Learning", href: "/learning", icon: Activity, group: "Systems" },
   { label: "Evolution", href: "/evolution", icon: GitBranch, group: "Systems" },
   { label: "Costs", href: "/costs", icon: Coins, group: "Systems" },
+  { label: "Oikos", href: "/oikos", icon: Heart, group: "Systems" },
   { label: "Federation", href: "/federation", icon: Globe, group: "Systems" },
+  { label: "Command Center", href: "/command-center", icon: Crosshair, group: "Security" },
+  { label: "Logs", href: "/logs", icon: Terminal, group: "Admin" },
 ];
 
 export function Sidebar() {

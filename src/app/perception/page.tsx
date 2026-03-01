@@ -1,22 +1,60 @@
 "use client";
 
 import { useApi } from "@/hooks/use-api";
-import { api, type AffectResponse, type WorkspaceResponse } from "@/lib/api-client";
+import {
+  api,
+  type AffectResponse,
+  type FileWatcherStatsResponse,
+  type SchedulerStatsResponse,
+  type WorkspaceDetailResponse,
+} from "@/lib/api-client";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { WorkspaceStream } from "@/components/alive/WorkspaceStream";
 import { useState, useCallback } from "react";
 import { cn } from "@/lib/cn";
 
 export default function PerceptionPage() {
   const affect = useApi<AffectResponse>(api.affect, { intervalMs: 2000 });
-  const workspace = useApi<WorkspaceResponse>(api.workspace, {
-    intervalMs: 3000,
+  const fileWatcher = useApi<FileWatcherStatsResponse>(api.fileWatcherStatus, {
+    intervalMs: 5000,
   });
+  const scheduler = useApi<SchedulerStatsResponse>(api.schedulerStatus, {
+    intervalMs: 5000,
+  });
+  const workspaceDetail = useApi<WorkspaceDetailResponse>(api.workspaceDetail, {
+    intervalMs: 2000,
+  });
+
+  // Axon outcome percepts re-entering Atune — source="internal:axon"
+  const axonFeedbackItems = (workspaceDetail.data?.workspace_items ?? []).filter(
+    (item) => item.source === "internal:axon",
+  );
+  const hasAxonFeedback = axonFeedbackItems.length > 0;
+
+  const [registeringTask, setRegisteringTask] = useState(false);
+  const [registerResult, setRegisterResult] = useState<string | null>(null);
   const [eventText, setEventText] = useState("");
   const [eventChannel, setEventChannel] = useState("text_chat");
   const [injecting, setInjecting] = useState(false);
   const [injectResult, setInjectResult] = useState<string | null>(null);
+
+  const registerSelfClock = useCallback(async () => {
+    setRegisteringTask(true);
+    setRegisterResult(null);
+    try {
+      const res = await api.schedulerRegister("self_clock", "self_clock");
+      setRegisterResult(JSON.stringify(res, null, 2));
+      scheduler.refetch();
+    } catch (err) {
+      setRegisterResult(
+        `Error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      setRegisteringTask(false);
+    }
+  }, [scheduler.refetch]);
 
   const injectEvent = useCallback(async () => {
     const text = eventText.trim();
@@ -125,61 +163,77 @@ export default function PerceptionPage() {
           </CardContent>
         </Card>
 
-        {/* Workspace */}
+        {/* Global Workspace — real-time via WorkspaceStream */}
         <Card>
           <CardHeader>
             <CardTitle>Global Workspace</CardTitle>
-            {workspace.data && (
-              <Badge variant="info">{workspace.data.meta_attention_mode}</Badge>
-            )}
+            <span className="text-[10px] text-white/20">
+              live · updated every cycle
+            </span>
           </CardHeader>
           <CardContent>
-            {workspace.data ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-[10px] text-white/25">Cycles</div>
-                    <div className="text-sm text-white/70 tabular-nums font-medium">
-                      {workspace.data.cycle_count.toLocaleString()}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-white/25">Threshold</div>
-                    <div className="text-sm text-white/70 tabular-nums font-medium">
-                      {workspace.data.dynamic_threshold.toFixed(3)}
-                    </div>
-                  </div>
-                </div>
+            <WorkspaceStream />
+          </CardContent>
+        </Card>
 
-                <div>
-                  <div className="text-[10px] text-white/20 uppercase tracking-widest mb-2">
-                    Recent Broadcasts
+        {/* Feedback Loop */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Feedback Loop</CardTitle>
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  hasAxonFeedback
+                    ? "bg-teal-400 animate-pulse"
+                    : "bg-white/10",
+                )}
+              />
+              <span className="text-[10px] text-white/20">
+                {hasAxonFeedback
+                  ? "Axon outcomes re-entering Atune"
+                  : "Awaiting first action outcome"}
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {hasAxonFeedback ? (
+              <div className="space-y-1.5">
+                {axonFeedbackItems.map((item, i) => (
+                  <div
+                    key={item.broadcast_id || i}
+                    className="rounded-lg border border-teal-400/10 bg-teal-400/[0.03] px-3 py-2"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="info">axon</Badge>
+                        <Badge variant="muted">system_event</Badge>
+                      </div>
+                      <span className="text-[10px] text-white/25 tabular-nums shrink-0">
+                        {item.salience.toFixed(3)}
+                      </span>
+                    </div>
+                    {item.content && (
+                      <p className="text-xs text-white/50 leading-relaxed">
+                        {item.content}
+                      </p>
+                    )}
+                    {item.timestamp && (
+                      <div className="mt-1 text-[10px] text-white/20">
+                        {new Date(item.timestamp).toLocaleTimeString()}
+                      </div>
+                    )}
                   </div>
-                  {(workspace.data.recent_broadcasts?.length ?? 0) > 0 ? (
-                    <div className="space-y-1.5">
-                      {workspace.data.recent_broadcasts.map((b) => (
-                        <div
-                          key={b.broadcast_id}
-                          className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-1.5"
-                        >
-                          <span className="text-[10px] text-white/30 font-mono truncate max-w-[150px]">
-                            {b.broadcast_id}
-                          </span>
-                          <Badge variant="info">
-                            {b.salience.toFixed(3)}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-white/20 text-center py-4">
-                      No broadcasts yet. Aurora is sensory-deprived.
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
             ) : (
-              <div className="text-sm text-white/20">Loading...</div>
+              <div className="flex flex-col items-center py-6 text-center">
+                <div className="text-xl opacity-10 mb-2">⟳</div>
+                <p className="text-xs text-white/20 max-w-xs">
+                  When Axon executes an action, the outcome re-enters Atune as a
+                  self-percept. That cycle closes the active inference loop.
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -245,6 +299,132 @@ export default function PerceptionPage() {
                 </pre>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* File Watcher */}
+        <Card>
+          <CardHeader>
+            <CardTitle>File Watcher</CardTitle>
+            {fileWatcher.data && (
+              <Badge variant={fileWatcher.data.running ? "success" : "muted"}>
+                {fileWatcher.data.running ? "running" : "stopped"}
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent>
+            {fileWatcher.data ? (
+              <div className="space-y-3">
+                <div className="text-[10px] text-white/25 font-mono truncate">
+                  {fileWatcher.data.watch_dir}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] text-white/25">Ingested</div>
+                    <div className="text-sm text-teal-400/80 tabular-nums font-medium">
+                      {fileWatcher.data.ingested.toLocaleString()}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-white/25">Failed</div>
+                    <div className={cn(
+                      "text-sm tabular-nums font-medium",
+                      fileWatcher.data.failed > 0
+                        ? "text-rose-400/80"
+                        : "text-white/40",
+                    )}>
+                      {fileWatcher.data.failed.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[11px] text-white/30 leading-relaxed">
+                  Drop <code className="text-white/50">.txt</code> or{" "}
+                  <code className="text-white/50">.md</code> files into the
+                  watched directory to inject percepts. Files are consumed on
+                  ingest.
+                </p>
+              </div>
+            ) : (
+              <div className="text-sm text-white/20">Loading...</div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Scheduler */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Perception Scheduler</CardTitle>
+            {scheduler.data && (
+              <Badge variant={scheduler.data.running ? "success" : "muted"}>
+                {scheduler.data.running ? "running" : "stopped"}
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent>
+            {scheduler.data ? (
+              <div className="space-y-3">
+                {Object.keys(scheduler.data.tasks).length > 0 ? (
+                  <div className="space-y-1.5">
+                    {Object.entries(scheduler.data.tasks).map(
+                      ([name, task]) => (
+                        <div
+                          key={name}
+                          className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs text-white/70 font-mono">
+                              {name}
+                            </span>
+                            <Badge
+                              variant={task.active ? "success" : "muted"}
+                            >
+                              {task.active ? "active" : "idle"}
+                            </Badge>
+                          </div>
+                          <div className="mt-1.5 flex gap-3">
+                            <span className="text-[10px] text-white/25">
+                              every {task.interval_seconds}s
+                            </span>
+                            <span className="text-[10px] text-white/25">
+                              {task.run_count} runs
+                            </span>
+                            {task.error_count > 0 && (
+                              <span className="text-[10px] text-rose-400/60">
+                                {task.error_count} errors
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-xs text-white/20 text-center py-2">
+                      No tasks registered.
+                    </div>
+                    <button
+                      onClick={registerSelfClock}
+                      disabled={registeringTask}
+                      className={cn(
+                        "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-white/50",
+                        "hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none",
+                      )}
+                    >
+                      {registeringTask ? "Registering..." : "+ Register self-clock task"}
+                    </button>
+                  </div>
+                )}
+
+                {registerResult && (
+                  <pre className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2 text-[10px] text-white/40 overflow-auto max-h-24">
+                    {registerResult}
+                  </pre>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-white/20">Loading...</div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -13,12 +13,15 @@ import { create } from "zustand";
 import type {
   AffectState,
   AliveMode,
+  AxonOutcome,
   CycleCompletedData,
   ModePreset,
+  OutcomesState,
   RhythmState,
   SleepStage,
   SynapseEvent,
   VisualParams,
+  WorkspaceState,
 } from "@/lib/types";
 import { AFFECT_NEUTRAL } from "@/lib/types";
 import { affectToVisual } from "@/lib/affect-mapping";
@@ -156,9 +159,15 @@ interface AliveState {
   // Connection
   connected: boolean;
 
+  // Stage 3: real-time workspace + outcomes
+  workspace: WorkspaceState | null;
+  outcomes: OutcomesState | null;
+
   // Actions
   updateAffect: (affect: AffectState) => void;
   updateSynapseEvent: (event: SynapseEvent) => void;
+  updateWorkspace: (workspace: WorkspaceState) => void;
+  updateOutcomes: (outcomes: OutcomesState) => void;
   setConnected: (connected: boolean) => void;
   tick: (delta: number) => void;
 }
@@ -189,6 +198,9 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
   broadcastFlash: 0,
 
   connected: false,
+
+  workspace: null,
+  outcomes: null,
 
   // ─── Actions ──────────────────────────────────────────────
 
@@ -345,6 +357,10 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
       }
     }
   },
+
+  updateWorkspace: (workspace) => set({ workspace }),
+
+  updateOutcomes: (outcomes) => set({ outcomes }),
 
   setConnected: (connected) => set({ connected }),
 

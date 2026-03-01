@@ -5,9 +5,20 @@
  * Uses native fetch (no axios). Reads NEXT_PUBLIC_API_URL.
  */
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://ecodiaos-core-oeipavsn4a-ts.a.run.app";
+const BASE_URL = (() => {
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  if (!url) {
+    if (typeof window !== "undefined") {
+      console.error(
+        "[api-client] NEXT_PUBLIC_API_URL is not set. " +
+          "Add it to .env.local (e.g. NEXT_PUBLIC_API_URL=http://localhost:8000) " +
+          "to avoid accidentally hitting the production backend.",
+      );
+    }
+    return "http://localhost:8000";
+  }
+  return url;
+})();
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
@@ -101,6 +112,69 @@ export interface WorkspaceResponse {
     salience: number;
     timestamp: string;
   }[];
+}
+
+export interface WorkspaceDetailResponse {
+  cycle_count: number;
+  dynamic_threshold: number;
+  meta_attention_mode: string;
+  workspace_items: {
+    broadcast_id: string;
+    content: string;
+    salience: number;
+    channel: string;
+    timestamp: string | null;
+    source: string;
+  }[];
+  affect: {
+    valence: number;
+    arousal: number;
+    curiosity: number;
+    coherence_stress: number;
+  };
+}
+
+export interface AxonOutcomesResponse {
+  outcomes: {
+    execution_id: string;
+    intent_id: string;
+    success: boolean;
+    partial: boolean;
+    status: string;
+    failure_reason: string | null;
+    duration_ms: number;
+    steps: {
+      action_type: string;
+      description: string;
+      success: boolean;
+      duration_ms: number;
+    }[];
+    world_state_changes: string[];
+    new_observations: string[];
+  }[];
+  total: number;
+  successful: number;
+  failed: number;
+}
+
+export interface FileWatcherStatsResponse {
+  watch_dir: string;
+  ingested: number;
+  failed: number;
+  running: boolean;
+}
+
+export interface SchedulerTaskStats {
+  interval_seconds: number;
+  channel: string;
+  run_count: number;
+  error_count: number;
+  active: boolean;
+}
+
+export interface SchedulerStatsResponse {
+  running: boolean;
+  tasks: Record<string, SchedulerTaskStats>;
 }
 
 export interface CycleTelemetryResponse {
@@ -234,6 +308,15 @@ export interface SimulaHistoryResponse {
     simulation_risk: string;
     applied_at: string;
     rolled_back: boolean;
+    rollback_reason?: string;
+    simulation_episodes_tested?: number;
+    counterfactual_regression_rate?: number;
+    dependency_blast_radius?: number;
+    constitutional_alignment?: number;
+    formal_verification_status?: string;
+    lean_proof_status?: string;
+    synthesis_status?: string;
+    repair_agent_status?: string;
   }[];
   current_version: number;
 }
@@ -248,6 +331,114 @@ export interface SimulaProposalsResponse {
     created_at: string;
   }[];
   total: number;
+}
+
+export type ChangeCategory =
+  | "add_executor"
+  | "add_input_channel"
+  | "add_pattern_detector"
+  | "adjust_budget"
+  | "modify_contract"
+  | "add_system_capability"
+  | "modify_cycle_timing"
+  | "change_consolidation"
+  | "modify_equor"
+  | "modify_constitution"
+  | "modify_invariants"
+  | "modify_self_evolution";
+
+export interface ChangeSpec {
+  // ADD_EXECUTOR
+  executor_name?: string;
+  executor_description?: string;
+  executor_action_type?: string;
+  executor_input_schema?: Record<string, unknown>;
+  // ADD_INPUT_CHANNEL
+  channel_name?: string;
+  channel_type?: string;
+  channel_description?: string;
+  // ADD_PATTERN_DETECTOR
+  detector_name?: string;
+  detector_description?: string;
+  detector_pattern_type?: string;
+  // ADJUST_BUDGET
+  budget_parameter?: string;
+  budget_old_value?: number;
+  budget_new_value?: number;
+  // MODIFY_CONTRACT
+  contract_changes?: string[];
+  // ADD_SYSTEM_CAPABILITY
+  capability_description?: string;
+  // MODIFY_CYCLE_TIMING
+  timing_parameter?: string;
+  timing_old_value?: number;
+  timing_new_value?: number;
+  // CHANGE_CONSOLIDATION
+  consolidation_schedule?: string;
+  // Cross-cutting
+  affected_systems?: string[];
+  additional_context?: string;
+  code_hint?: string;
+}
+
+export interface SubmitProposalRequest {
+  source: "evo" | "governance";
+  category: ChangeCategory;
+  description: string;
+  change_spec: ChangeSpec;
+  evidence?: string[];
+  expected_benefit?: string;
+  risk_assessment?: string;
+}
+
+export interface SubmitProposalResponse {
+  proposal_id: string;
+  result: {
+    status: string;
+    reason?: string;
+    version?: number;
+    governance_record_id?: string;
+    files_changed?: string[];
+  };
+}
+
+export interface SimulaStatsResponse {
+  initialized: boolean;
+  current_version: number;
+  proposals_received: number;
+  proposals_approved: number;
+  proposals_rejected: number;
+  proposals_rolled_back: number;
+  proposals_deduplicated: number;
+  proposals_awaiting_governance: number;
+  active_proposals: number;
+  analytics?: {
+    total_proposals: number;
+    evolution_velocity: number;
+    rollback_rate: number;
+    mean_simulation_risk: number;
+  };
+  stage3?: Record<string, boolean>;
+  stage4?: Record<string, boolean>;
+  stage5?: Record<string, boolean>;
+  stage6?: Record<string, boolean>;
+}
+
+export interface SimulaVersionResponse {
+  current_version: number;
+  version_chain: {
+    version: number;
+    timestamp: string;
+    proposal_ids: string[];
+    config_hash: string;
+  }[];
+}
+
+export interface ApproveProposalResponse {
+  status: string;
+  reason?: string;
+  version?: number;
+  files_changed?: string[];
 }
 
 export interface FederationIdentityResponse {
@@ -613,8 +804,8 @@ export interface LLMBudgetStatus {
   tokens_remaining: number;
   calls_made: number;
   calls_remaining: number;
-  burn_rate_tokens_per_sec: number;
-  hours_until_exhausted: number;
+  burn_rate_tokens_per_sec: number | null;
+  hours_until_exhausted: number | null;
   warning: string | null;
 }
 
@@ -650,6 +841,110 @@ export interface LLMSummaryResponse {
   summary: string;
 }
 
+// ─── Oikos (Economic Engine) Types ───────────────────────────────
+
+export interface OikosCertificate {
+  status: string;
+  type: string | null;
+  issued_at: string | null;
+  expires_at: string | null;
+  remaining_days: number;
+  lineage_hash: string | null;
+  instance_id: string | null;
+}
+
+export interface OikosStatusResponse {
+  total_net_worth: string;
+  liquid_balance: string;
+  survival_reserve: string;
+  survival_reserve_target: string;
+  total_deployed: string;
+  total_receivables: string;
+  total_asset_value: string;
+  total_fleet_equity: string;
+  bmr_usd_per_day: string;
+  burn_rate_usd_per_day: string;
+  runway_days: string;
+  starvation_level: string;
+  metabolic_efficiency: string;
+  is_metabolically_positive: boolean;
+  revenue_24h: string;
+  revenue_7d: string;
+  costs_24h: string;
+  costs_7d: string;
+  net_income_24h: string;
+  net_income_7d: string;
+  survival_probability_30d: string;
+  certificate: OikosCertificate;
+  timestamp: string;
+}
+
+export interface OikosOrgan {
+  organ_id: string;
+  category: string;
+  specialisation: string;
+  maturity: string;
+  resource_allocation_pct: string;
+  efficiency: string;
+  revenue_30d: string;
+  cost_30d: string;
+  days_since_last_revenue: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface OikosOrgansResponse {
+  organs: OikosOrgan[];
+  active_count: number;
+  total_count: number;
+  stats: Record<string, unknown>;
+}
+
+export interface OikosOwnedAsset {
+  asset_id: string;
+  name: string;
+  description: string;
+  asset_type: string;
+  status: string;
+  monthly_revenue_usd: string;
+  monthly_cost_usd: string;
+  total_revenue_usd: string;
+  development_cost_usd: string;
+  break_even_reached: boolean;
+  projected_break_even_days: number;
+  days_since_deployment: number;
+  is_profitable: boolean;
+  deployed_at: string | null;
+  compute_provider: string;
+}
+
+export interface OikosChildInstance {
+  instance_id: string;
+  niche: string;
+  status: string;
+  seed_capital_usd: string;
+  current_net_worth_usd: string;
+  current_runway_days: string;
+  current_efficiency: string;
+  dividend_rate: string;
+  total_dividends_paid_usd: string;
+  is_independent: boolean;
+  spawned_at: string;
+}
+
+export interface OikosAssetsResponse {
+  owned_assets: OikosOwnedAsset[];
+  child_instances: OikosChildInstance[];
+  total_asset_value: string;
+  total_fleet_equity: string;
+}
+
+export interface GenesisSparkResponse {
+  status: "ok" | "error";
+  message: string;
+  phases: Record<string, boolean>;
+}
+
 // ─── API Client ──────────────────────────────────────────────────
 
 export const api = {
@@ -663,11 +958,26 @@ export const api = {
   // Perception
   affect: () => request<AffectResponse>("/api/v1/atune/affect"),
   workspace: () => request<WorkspaceResponse>("/api/v1/atune/workspace"),
+  workspaceDetail: () =>
+    request<WorkspaceDetailResponse>("/api/v1/atune/workspace-detail"),
   perceiveEvent: (text: string, channel = "text_chat") =>
     request<Record<string, unknown>>("/api/v1/perceive/event", {
       method: "POST",
       body: JSON.stringify({ text, channel }),
     }),
+  fileWatcherStatus: () =>
+    request<FileWatcherStatsResponse>("/api/v1/perception/file-watcher"),
+  schedulerStatus: () =>
+    request<SchedulerStatsResponse>("/api/v1/perception/scheduler"),
+  schedulerRegister: (name: string, task: string) =>
+    request<Record<string, unknown>>("/api/v1/perception/scheduler/register", {
+      method: "POST",
+      body: JSON.stringify({ name, task }),
+    }),
+
+  // Axon outcomes
+  axonOutcomes: (limit = 20) =>
+    request<AxonOutcomesResponse>(`/api/v1/axon/outcomes?limit=${limit}`),
 
   // Chat
   chat: (message: string, conversationId?: string, speakerName?: string) =>
@@ -714,9 +1024,25 @@ export const api = {
     }),
 
   // Simula
-  simulaHistory: () => request<SimulaHistoryResponse>("/api/v1/simula/history"),
+  simulaHistory: (limit = 50) =>
+    request<SimulaHistoryResponse>(`/api/v1/simula/history?limit=${limit}`),
   simulaProposals: () =>
     request<SimulaProposalsResponse>("/api/v1/simula/proposals"),
+  simulaStats: () => request<SimulaStatsResponse>("/api/v1/simula/stats"),
+  simulaVersion: () => request<SimulaVersionResponse>("/api/v1/simula/version"),
+  simulaSubmitProposal: (body: SubmitProposalRequest) =>
+    request<SubmitProposalResponse>("/api/v1/simula/proposals", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  simulaApproveProposal: (proposalId: string, governanceRecordId: string) =>
+    request<ApproveProposalResponse>(
+      `/api/v1/simula/proposals/${proposalId}/approve`,
+      {
+        method: "POST",
+        body: JSON.stringify({ governance_record_id: governanceRecordId }),
+      },
+    ),
 
   // Thymos (Immune System)
   thymosHealth: () => request<ThymosHealthResponse>("/api/v1/thymos/health"),
@@ -772,4 +1098,13 @@ export const api = {
   // LLM Cost & Optimization
   llmMetrics: () => request<LLMMetricsResponse>("/api/v1/admin/llm/metrics"),
   llmSummary: () => request<LLMSummaryResponse>("/api/v1/admin/llm/summary"),
+
+  // Oikos (Economic Engine)
+  oikosStatus: () => request<OikosStatusResponse>("/api/v1/oikos/status"),
+  oikosOrgans: () => request<OikosOrgansResponse>("/api/v1/oikos/organs"),
+  oikosAssets: () => request<OikosAssetsResponse>("/api/v1/oikos/assets"),
+  triggerGenesisSpark: () =>
+    request<GenesisSparkResponse>("/api/v1/oikos/genesis-spark", {
+      method: "POST",
+    }),
 } as const;

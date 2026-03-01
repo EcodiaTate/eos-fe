@@ -57,6 +57,54 @@ export type SynapseEventType =
   | "system_stopped"
   | "system_restarting";
 
+// ─── Workspace State (from Atune) ────────────────────────────────
+
+export interface WorkspaceBroadcast {
+  broadcast_id: string;
+  salience: number;
+  ts: string | null;
+}
+
+export interface WorkspaceState {
+  cycle_count: number;
+  dynamic_threshold: number;
+  meta_attention_mode: string;
+  recent_broadcasts: WorkspaceBroadcast[];
+  affect: {
+    valence: number;
+    arousal: number;
+    curiosity: number;
+    coherence_stress: number;
+  };
+}
+
+// ─── Axon Outcomes (from the Nova→Equor→Axon pipeline) ───────────
+
+export interface OutcomeStep {
+  action_type: string;
+  description: string;
+  success: boolean;
+}
+
+export interface AxonOutcome {
+  execution_id: string;
+  intent_id: string;
+  success: boolean;
+  partial: boolean;
+  status: string;
+  failure_reason: string | null;
+  duration_ms: number;
+  steps: OutcomeStep[];
+  world_state_changes: string[];
+}
+
+export interface OutcomesState {
+  outcomes: AxonOutcome[];
+  total: number;
+  successful: number;
+  failed: number;
+}
+
 // ─── WebSocket Message Envelope ──────────────────────────────────
 
 export interface WSMessageAffect {
@@ -69,7 +117,21 @@ export interface WSMessageSynapse {
   payload: SynapseEvent;
 }
 
-export type WSMessage = WSMessageAffect | WSMessageSynapse;
+export interface WSMessageWorkspace {
+  stream: "workspace";
+  payload: WorkspaceState;
+}
+
+export interface WSMessageOutcomes {
+  stream: "outcomes";
+  payload: OutcomesState;
+}
+
+export type WSMessage =
+  | WSMessageAffect
+  | WSMessageSynapse
+  | WSMessageWorkspace
+  | WSMessageOutcomes;
 
 // ─── Visual Parameters (output of affect-to-visual mapping) ──────
 

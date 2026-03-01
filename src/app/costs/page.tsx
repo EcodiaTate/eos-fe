@@ -483,9 +483,11 @@ export default function CostsPage() {
                       <Metric
                         label="Until Exhausted"
                         value={
-                          budget.hours_until_exhausted > 100
-                            ? "100h+"
-                            : `${budget.hours_until_exhausted.toFixed(1)}h`
+                          budget.hours_until_exhausted == null
+                            ? "∞"
+                            : budget.hours_until_exhausted > 100
+                              ? "100h+"
+                              : `${budget.hours_until_exhausted.toFixed(1)}h`
                         }
                       />
                     </div>

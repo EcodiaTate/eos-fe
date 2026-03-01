@@ -36,6 +36,8 @@ export function useAliveSocket(): void {
 
   const updateAffect = useAliveStore((s) => s.updateAffect);
   const updateSynapseEvent = useAliveStore((s) => s.updateSynapseEvent);
+  const updateWorkspace = useAliveStore((s) => s.updateWorkspace);
+  const updateOutcomes = useAliveStore((s) => s.updateOutcomes);
   const setConnected = useAliveStore((s) => s.setConnected);
 
   const connect = useCallback(() => {
@@ -56,6 +58,10 @@ export function useAliveSocket(): void {
           updateAffect(msg.payload);
         } else if (msg.stream === "synapse") {
           updateSynapseEvent(msg.payload);
+        } else if (msg.stream === "workspace") {
+          updateWorkspace(msg.payload);
+        } else if (msg.stream === "outcomes") {
+          updateOutcomes(msg.payload);
         }
       } catch {
         // Ignore malformed messages

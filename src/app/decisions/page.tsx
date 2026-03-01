@@ -10,6 +10,7 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DecisionStream } from "@/components/alive/DecisionStream";
 
 export default function DecisionsPage() {
   const goals = useApi<GoalsResponse>(api.goals, { intervalMs: 10000 });
@@ -22,10 +23,23 @@ export default function DecisionsPage() {
     <div className="max-w-4xl mx-auto">
       <PageHeader
         title="Decisions"
-        description="Nova — active inference, goals, beliefs, and personality"
+        description="Nova→Equor→Axon — goals, beliefs, and action outcomes"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Action Pipeline */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Action Pipeline</CardTitle>
+            <span className="text-[10px] text-white/20">
+              Nova→Equor→Axon · live execution outcomes
+            </span>
+          </CardHeader>
+          <CardContent>
+            <DecisionStream />
+          </CardContent>
+        </Card>
+
         {/* Goals */}
         <Card>
           <CardHeader>
