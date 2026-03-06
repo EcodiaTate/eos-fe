@@ -4,7 +4,7 @@
 const coreVert = /* glsl */ `
 uniform float uTime;
 uniform float uTurbulence;   // 0-1 from coherence_stress
-uniform float uScale;        // 0.7-1.2 from dominance
+uniform float uScale;        // 0.7-1.2 from confidence
 uniform float uPulseRate;    // multiplier from arousal
 uniform float uBroadcastFlash; // 0-1 decaying flash on broadcast
 
@@ -19,7 +19,7 @@ varying float vFresnel;
 void main() {
   vNormal = normalize(normalMatrix * normal);
 
-  // Base position scaled by dominance
+  // Base position scaled by confidence
   vec3 pos = position * uScale;
 
   // ── Primary organic noise ──

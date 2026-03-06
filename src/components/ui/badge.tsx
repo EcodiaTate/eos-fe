@@ -10,34 +10,47 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   pulse?: boolean;
 }
 
-const variantStyles: Record<BadgeVariant, string> = {
-  default: "bg-white/10 text-white/70 border-white/10",
-  success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  warning: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  danger: "bg-red-500/10 text-red-400 border-red-500/20",
-  info: "bg-sky-500/10 text-sky-400 border-sky-500/20",
-  muted: "bg-white/5 text-white/40 border-white/5",
+const variantStyles: Record<BadgeVariant, { bg: string; color: string; border: string }> = {
+  default:  { bg: "rgba(100,116,139,0.2)",    color: "#cbd5e1",              border: "rgba(100,116,139,0.3)"    },
+  success:  { bg: "rgba(90,200,38,0.15)",      color: "#4ade80",               border: "rgba(90,200,38,0.4)"       },
+  warning:  { bg: "rgba(232,168,32,0.15)",     color: "#facc15",              border: "rgba(232,168,32,0.4)"      },
+  danger:   { bg: "rgba(220,38,38,0.15)",      color: "#ef4444",              border: "rgba(220,38,38,0.4)"       },
+  info:     { bg: "rgba(2,132,199,0.15)",      color: "#06b6d4",              border: "rgba(2,132,199,0.4)"       },
+  muted:    { bg: "rgba(100,116,139,0.1)",     color: "#94a3b8",              border: "rgba(100,116,139,0.2)"     },
 };
 
 export function Badge({
   className,
   variant = "default",
   pulse,
+  style,
   ...props
 }: BadgeProps) {
+  const v = variantStyles[variant];
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
-        variantStyles[variant],
-        className,
-      )}
+      className={cn("inline-flex items-center gap-1", className)}
+      style={{
+        fontFamily: "var(--font-body)",
+        fontSize: 10,
+        fontWeight: 500,
+        letterSpacing: "0.04em",
+        padding: "2px 8px",
+        borderRadius: 99,
+        background: v.bg,
+        color: v.color,
+        border: `1px solid ${v.border}`,
+        ...style,
+      }}
       {...props}
     >
       {pulse && (
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-50" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
+        <span
+          className="status-dot"
+          style={{ color: v.color, width: 6, height: 6 }}
+        >
+          <span className="ping" />
+          <span className="core" style={{ width: 5, height: 5 }} />
         </span>
       )}
       {props.children}

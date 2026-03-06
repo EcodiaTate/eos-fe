@@ -7,6 +7,7 @@ import {
   Wifi, WifiOff, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { fmtMs as fmtMsNum } from "@/lib/formatters";
 
 interface LogEntry {
   id: number;
@@ -67,9 +68,7 @@ function formatTime(ts: string) {
 
 function fmtMs(v: unknown): string {
   if (typeof v !== "number") return String(v ?? "");
-  if (v >= 60000) return `${Math.round(v / 60000)}m`;
-  if (v >= 1000) return `${(v / 1000).toFixed(1)}s`;
-  return `${Math.round(v)}ms`;
+  return fmtMsNum(v);
 }
 
 function scoreLabel(v: unknown): string {
@@ -168,8 +167,8 @@ function humanize(log: LogEntry): { headline: string; detail?: string } {
   if (e === "rollback_triggered") return { headline: "Change rolled back", detail: fmt(g("reason")) };
 
   // Oneiros — dream engine
-  if (e === "nrem_begin") return { headline: "Deep sleep started — consolidating memories" };
-  if (e === "nrem_end") return { headline: "Deep sleep complete" };
+  if (e === "nrem_begin" || e === "slow_wave_begin") return { headline: "Deep sleep started — consolidating memories" };
+  if (e === "nrem_end" || e === "slow_wave_end") return { headline: "Deep sleep complete" };
   if (e === "rem_begin" || e === "dreaming_begin") return { headline: "Dreaming started" };
   if (e === "rem_end" || e === "dreaming_end") return { headline: "Dreaming complete" };
   if (e === "sleep_cycle_recorded") return { headline: "Sleep cycle logged", detail: `quality: ${fmt(g("quality"))}` };

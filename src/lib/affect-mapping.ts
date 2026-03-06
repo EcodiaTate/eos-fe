@@ -41,7 +41,7 @@ function piecewise(value: number, breakpoints: [number, number][]): number {
  *   care_activation  → warmthEmission:     0→0.0,   0.5→0.3,   1.0→0.8
  *   curiosity        → tendrilReach:       0→0.3,   0.5→0.6,   1.0→1.0
  *   coherence_stress → surfaceTurbulence:  0→0.05,  0.5→0.3,   1.0→0.8
- *   dominance        → coreScale:          0→0.7,   0.5→1.0,   1.0→1.2
+ *   confidence       → coreScale:          0→0.7,   0.5→1.0,   1.0→1.2
  */
 export function affectToVisual(affect: AffectState): VisualParams {
   const arousalSpeed = piecewise(affect.arousal, [
@@ -72,7 +72,7 @@ export function affectToVisual(affect: AffectState): VisualParams {
       [0.5, 0.3],
       [1.0, 0.8],
     ]),
-    coreScale: piecewise(affect.dominance, [
+    coreScale: piecewise(affect.confidence, [
       [0.0, 0.7],
       [0.5, 1.0],
       [1.0, 1.2],

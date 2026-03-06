@@ -38,6 +38,7 @@ export function useAliveSocket(): void {
   const updateSynapseEvent = useAliveStore((s) => s.updateSynapseEvent);
   const updateWorkspace = useAliveStore((s) => s.updateWorkspace);
   const updateOutcomes = useAliveStore((s) => s.updateOutcomes);
+  const updateSystemState = useAliveStore((s) => s.updateSystemState);
   const setConnected = useAliveStore((s) => s.setConnected);
 
   const connect = useCallback(() => {
@@ -62,6 +63,8 @@ export function useAliveSocket(): void {
           updateWorkspace(msg.payload);
         } else if (msg.stream === "outcomes") {
           updateOutcomes(msg.payload);
+        } else if (msg.stream === "system_state") {
+          updateSystemState(msg.payload);
         }
       } catch {
         // Ignore malformed messages
@@ -86,7 +89,7 @@ export function useAliveSocket(): void {
 
       setTimeout(connect, delay);
     };
-  }, [updateAffect, updateSynapseEvent, setConnected]);
+  }, [updateAffect, updateSynapseEvent, updateWorkspace, updateOutcomes, updateSystemState, setConnected]);
 
   useEffect(() => {
     mountedRef.current = true;

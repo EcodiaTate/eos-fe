@@ -22,12 +22,12 @@ export function VersionChain({ data, loading }: Props) {
         {loading && !data && (
           <div className="text-sm text-white/20">Loading…</div>
         )}
-        {data && data.version_chain.length === 0 && (
+        {data?.version_chain && data.version_chain.length === 0 && (
           <div className="text-center py-6 text-xs text-white/25">
             No version history. Simula has not applied any changes yet.
           </div>
         )}
-        {data && data.version_chain.length > 0 && (
+        {data?.version_chain && data.version_chain.length > 0 && (
           <div className="space-y-1.5">
             {[...data.version_chain].reverse().map((v, i) => (
               <div

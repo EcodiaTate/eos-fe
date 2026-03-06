@@ -20,65 +20,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
-
-function stageColor(stage: string): {
-  bg: string;
-  text: string;
-  glow: string;
-  label: string;
-} {
-  switch (stage.toUpperCase()) {
-    case "WAKE":
-      return {
-        bg: "bg-sky-500",
-        text: "text-sky-400",
-        glow: "shadow-[0_0_12px_rgba(56,189,248,0.3)]",
-        label: "Awake",
-      };
-    case "HYPNAGOGIA":
-      return {
-        bg: "bg-violet-500",
-        text: "text-violet-400",
-        glow: "shadow-[0_0_12px_rgba(139,92,246,0.3)]",
-        label: "Falling Asleep",
-      };
-    case "NREM":
-      return {
-        bg: "bg-indigo-600",
-        text: "text-indigo-400",
-        glow: "shadow-[0_0_12px_rgba(99,102,241,0.3)]",
-        label: "Deep Sleep (NREM)",
-      };
-    case "REM":
-      return {
-        bg: "bg-fuchsia-500",
-        text: "text-fuchsia-400",
-        glow: "shadow-[0_0_12px_rgba(217,70,239,0.3)]",
-        label: "Dreaming (REM)",
-      };
-    case "LUCID":
-      return {
-        bg: "bg-amber-400",
-        text: "text-amber-300",
-        glow: "shadow-[0_0_12px_rgba(251,191,36,0.4)]",
-        label: "Lucid Dreaming",
-      };
-    case "HYPNOPOMPIA":
-      return {
-        bg: "bg-orange-400",
-        text: "text-orange-400",
-        glow: "shadow-[0_0_12px_rgba(251,146,60,0.3)]",
-        label: "Waking Up",
-      };
-    default:
-      return {
-        bg: "bg-white/20",
-        text: "text-white/40",
-        glow: "",
-        label: stage,
-      };
-  }
-}
+import { stageColor } from "@/lib/oneiros-stages";
 
 function pressureColor(pressure: number): string {
   if (pressure >= 0.95) return "bg-red-500";

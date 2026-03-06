@@ -20,6 +20,7 @@ import type {
   RhythmState,
   SleepStage,
   SynapseEvent,
+  SystemStatePayload,
   VisualParams,
   WorkspaceState,
 } from "@/lib/types";
@@ -112,15 +113,15 @@ function lerpPreset(
  */
 function dreamingHueTarget(stage: SleepStage): number | null {
   switch (stage) {
-    case "nrem":
+    case "slow_wave":
       return 240; // Deep indigo — memory consolidation
     case "rem":
       // Oscillate between fuchsia and teal for vivid dreaming
       return 280 + Math.sin(Date.now() * 0.0005) * 40;
     case "lucid":
       return 50; // Golden — self-directed exploration
-    case "hypnagogia":
-    case "hypnopompia":
+    case "descent":
+    case "emergence":
       return 260; // Violet — transitional
     default:
       return null;
@@ -163,11 +164,18 @@ interface AliveState {
   workspace: WorkspaceState | null;
   outcomes: OutcomesState | null;
 
+  // 1Hz aggregated system snapshot (post-consolidation structure)
+  systemState: SystemStatePayload | null;
+
+  // Last raw synapse event (for subscriber components)
+  lastSynapseEvent: SynapseEvent | null;
+
   // Actions
   updateAffect: (affect: AffectState) => void;
   updateSynapseEvent: (event: SynapseEvent) => void;
   updateWorkspace: (workspace: WorkspaceState) => void;
   updateOutcomes: (outcomes: OutcomesState) => void;
+  updateSystemState: (state: SystemStatePayload) => void;
   setConnected: (connected: boolean) => void;
   tick: (delta: number) => void;
 }
@@ -201,6 +209,9 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
 
   workspace: null,
   outcomes: null,
+  systemState: null,
+
+  lastSynapseEvent: null,
 
   // ─── Actions ──────────────────────────────────────────────
 
@@ -356,11 +367,16 @@ export const useAliveStore = create<AliveState>()((set, get) => ({
         break;
       }
     }
+
+    // Always expose the raw event so subscriber components can react
+    set({ lastSynapseEvent: event });
   },
 
   updateWorkspace: (workspace) => set({ workspace }),
 
   updateOutcomes: (outcomes) => set({ outcomes }),
+
+  updateSystemState: (systemState) => set({ systemState }),
 
   setConnected: (connected) => set({ connected }),
 

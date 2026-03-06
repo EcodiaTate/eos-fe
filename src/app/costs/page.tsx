@@ -7,6 +7,8 @@ import type {
   BudgetTier,
   LLMMetricsResponse,
   LLMSystemMetrics,
+  SACMMetricsResponse,
+  SACMSavingsResponse,
 } from "@/lib/api-client";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -187,7 +189,8 @@ function formatTokens(n: number): string {
   return n.toString();
 }
 
-function formatCost(n: number): string {
+function formatCost(n: number | null | undefined): string {
+  if (n == null) return "—";
   if (n < 0.01) return `$${n.toFixed(4)}`;
   return `$${n.toFixed(2)}`;
 }
@@ -324,12 +327,98 @@ function SystemTable({
   );
 }
 
+// ─── SACM Card Content ───────────────────────────────────────────
+
+function SacmMetricsContent({ data }: { data: SACMMetricsResponse | null }) {
+  if (!data) return <div className="text-sm text-white/20">Loading...</div>;
+  const verifyRate = data.verification_pass_rate * 100;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <div className="text-[10px] text-white/25 uppercase tracking-wider">Submitted</div>
+          <div className="text-sm text-white/80 tabular-nums font-medium">{data.workloads_submitted.toLocaleString()}</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-white/25 uppercase tracking-wider">Completed</div>
+          <div className="text-sm text-teal-400/80 tabular-nums font-medium">{data.workloads_completed.toLocaleString()}</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-white/25 uppercase tracking-wider">Failed</div>
+          <div className={cn("text-sm tabular-nums font-medium", data.workloads_failed > 0 ? "text-rose-400/80" : "text-white/40")}>
+            {data.workloads_failed.toLocaleString()}
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/[0.06]">
+        <div>
+          <div className="text-[10px] text-white/25 uppercase tracking-wider">Remote</div>
+          <div className="text-sm text-white/80 tabular-nums font-medium">{data.workloads_placed_remote.toLocaleString()}</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-white/25 uppercase tracking-wider">Verify</div>
+          <Badge variant={verifyRate >= 90 ? "success" : verifyRate >= 70 ? "warning" : "danger"}>
+            {verifyRate.toFixed(0)}%
+          </Badge>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SacmSavingsContent({ data }: { data: SACMSavingsResponse | null }) {
+  if (!data) return <div className="text-sm text-white/20">Loading...</div>;
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-around gap-4">
+        <div className="text-center">
+          <div className="text-2xl font-light text-white/80 tabular-nums">{formatCost(data.total_actual_usd)}</div>
+          <div className="text-[10px] text-white/30 mt-1">Total Spend</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-light text-teal-400/80 tabular-nums">{formatCost(data.total_savings_usd)}</div>
+          <div className="text-[10px] text-white/30 mt-1">Savings</div>
+        </div>
+        <ProgressRing value={data.savings_ratio} max={1} size={68} strokeWidth={5} color="#2dd4bf" label="saved" />
+      </div>
+      {data.top_providers.length > 0 && (
+        <div className="pt-3 border-t border-white/[0.06]">
+          <div className="text-[10px] text-white/25 uppercase tracking-wider mb-2">Per Provider</div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-white/[0.05]">
+                <th className="text-left py-1 text-white/25 font-normal">Provider</th>
+                <th className="text-right py-1 text-white/25 font-normal">Spend</th>
+                <th className="text-right py-1 text-white/25 font-normal">Jobs</th>
+                <th className="text-right py-1 text-white/25 font-normal">Saved</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.top_providers.map((p) => (
+                <tr key={p.provider_id} className="border-b border-white/[0.03]">
+                  <td className="py-1.5 text-white/60 font-mono">{p.provider_id}</td>
+                  <td className="py-1.5 text-right text-white/60 tabular-nums">{formatCost(p.total_actual_usd)}</td>
+                  <td className="py-1.5 text-right text-white/40 tabular-nums">{p.workload_count}</td>
+                  <td className="py-1.5 text-right text-teal-400/70 tabular-nums">{formatCost(p.total_savings_usd)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ──────────────────────────────────────────────────
 
 export default function CostsPage() {
   const { data, loading, error } = useApi<LLMMetricsResponse>(api.llmMetrics, {
     intervalMs: 3000,
   });
+
+  const sacmMetrics = useApi<SACMMetricsResponse>(api.sacmMetrics, { intervalMs: 5000 });
+  const sacmSavings = useApi<SACMSavingsResponse>(api.sacmSavings, { intervalMs: 5000 });
 
   const [sortKey, setSortKey] = useState<SortKey>("cost");
   const [sortAsc, setSortAsc] = useState(false);
@@ -713,6 +802,37 @@ export default function CostsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Row 5: SACM panels */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Card A — Remote Compute (SACM) */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Remote Compute (SACM)</CardTitle>
+                {sacmMetrics.data?.rolling_burn_rate_usd_per_hour !== undefined && (
+                  <span className="text-[10px] text-white/25 tabular-nums">
+                    {formatCost(sacmMetrics.data.rolling_burn_rate_usd_per_hour)}/hr
+                  </span>
+                )}
+              </CardHeader>
+              <CardContent>
+                <SacmMetricsContent data={sacmMetrics.data} />
+              </CardContent>
+            </Card>
+
+            {/* Card B — Compute Savings */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Compute Savings</CardTitle>
+                {sacmSavings.data && (
+                  <span className="text-[10px] text-white/25">{sacmSavings.data.period_label}</span>
+                )}
+              </CardHeader>
+              <CardContent>
+                <SacmSavingsContent data={sacmSavings.data} />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       ) : null}
     </div>

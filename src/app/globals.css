@@ -1,69 +1,237 @@
 @import "tailwindcss";
 
+/* ─── Solar-punk Design Tokens ─────────────────────────────────────────── */
 :root {
-  --organism-bg: #050510;
-  --surface-0: #08081a;
-  --surface-1: rgba(255, 255, 255, 0.02);
-  --surface-2: rgba(255, 255, 255, 0.04);
-  --border: rgba(255, 255, 255, 0.06);
-  --text-primary: rgba(255, 255, 255, 0.9);
-  --text-secondary: rgba(255, 255, 255, 0.5);
-  --text-muted: rgba(255, 255, 255, 0.25);
-  --accent-teal: #5eead4;
-  --accent-indigo: #818cf8;
+  /* Base surfaces — forest green */
+  --bg: #0f1a12;
+  --bg-warm: #142018;
+  --bg-card: #1a2d1e;
+  --bg-card-alt: #132017;
+  --bg-sidebar: #0d1810;
+
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --border-accent: rgba(102, 187, 106, 0.35);
+
+  /* Forest green accent palette */
+  --lime: #4caf50;
+  --lime-bright: #66bb6a;
+  --lime-dim: #81c784;
+  --lime-ghost: rgba(76, 175, 80, 0.08);
+  --lime-glow: rgba(76, 175, 80, 0.18);
+
+  --gold: #b07d0a;
+  --gold-bright: #e8a820;
+  --gold-pale: #fce599;
+  --gold-ghost: rgba(176, 125, 10, 0.07);
+
+  --ink: #f1f5f9;
+  --ink-strong: #e2e8f0;
+  --ink-mid: #cbd5e1;
+  --ink-soft: #94a3b8;
+  --ink-muted: #64748b;
+  --ink-ghost: rgba(241, 245, 249, 0.08);
+
+  /* Status */
+  --status-healthy: #38a226;
+  --status-warn: #d97706;
+  --status-danger: #dc2626;
+  --status-info: #0284c7;
+
+  /* Typography */
+  --font-display: "Syne", sans-serif;
+  --font-body: "JetBrains Mono", monospace;
+  --font-prose: "Instrument Serif", serif;
+
+  /* Shadows */
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.05), 0 3px 12px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 2px 6px rgba(0,0,0,0.08), 0 8px 28px rgba(0,0,0,0.06);
+  --shadow-lime: 0 0 0 1px rgba(76, 175, 80, 0.2), 0 4px 20px rgba(76, 175, 80, 0.1);
+  --shadow-inset: inset 0 1px 0 rgba(255,255,255,0.85);
 }
 
-html,
-body {
+/* ─── Reset & Base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--organism-bg);
-  color: #e0e0e0;
-  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: #e8eef5;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-#__next {
-  width: 100%;
-  height: 100%;
-}
+#__next { width: 100%; height: 100%; }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+/* ─── Scrollbars ────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  background: rgba(76, 175, 80, 0.28);
+  border-radius: 99px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(76, 175, 80, 0.5);
 }
 
-/* Smooth scroll */
-.scroll-smooth {
-  scroll-behavior: smooth;
-}
+/* ─── Keyframe Animations ───────────────────────────────────────────────── */
 
-/* Glow keyframe for pulsing elements */
-@keyframes glow-pulse {
-  0%,
-  100% {
-    opacity: 0.6;
+/* Organic cell pulse — card glow breathes */
+@keyframes cell-breathe {
+  0%, 100% {
+    box-shadow: var(--shadow-card), 0 0 0 1px transparent;
   }
   50% {
-    opacity: 1;
+    box-shadow: var(--shadow-card), 0 0 0 1px rgba(76, 175, 80, 0.18), 0 0 20px rgba(76, 175, 80, 0.06);
   }
 }
+.cell-breathe { animation: cell-breathe 4s ease-in-out infinite; }
 
-.glow-pulse {
-  animation: glow-pulse 2s ease-in-out infinite;
+/* Photon drift — horizontal shimmer on progress bars */
+@keyframes photon-drift {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Spore ping — badge live indicator */
+@keyframes spore-ping {
+  0% { transform: scale(1); opacity: 0.75; }
+  65% { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.spore-ping { animation: spore-ping 1.8s ease-out infinite; }
+
+/* Float up — page entry stagger */
+@keyframes float-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.float-up {
+  animation: float-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.float-up-1 { animation-delay: 0.04s; }
+.float-up-2 { animation-delay: 0.09s; }
+.float-up-3 { animation-delay: 0.14s; }
+.float-up-4 { animation-delay: 0.19s; }
+.float-up-5 { animation-delay: 0.24s; }
+.float-up-6 { animation-delay: 0.29s; }
+.float-up-7 { animation-delay: 0.34s; }
+.float-up-8 { animation-delay: 0.39s; }
+
+/* Voltage flicker — error/alert states */
+@keyframes voltage {
+  0%, 100% { opacity: 1; }
+  48%, 52% { opacity: 0.35; }
+}
+.voltage { animation: voltage 0.7s steps(1) infinite; }
+
+/* Grow in — sidebar active accent line */
+@keyframes stem-grow {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to { transform: scaleY(1); transform-origin: bottom; }
+}
+.stem-grow { animation: stem-grow 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ─── Card surface ──────────────────────────────────────────────────────── */
+.card-solar {
+  background: var(--bg-card);
+  border: 1px solid rgba(102, 187, 106, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.card-solar:hover {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  border-color: rgba(102, 187, 106, 0.2);
+}
+.card-solar.glow {
+  animation: cell-breathe 4s ease-in-out infinite;
+}
+
+/* ─── Progress bars ─────────────────────────────────────────────────────── */
+.bar-track {
+  height: 3px;
+  border-radius: 99px;
+  background: var(--ink-ghost);
+  overflow: hidden;
+  position: relative;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+.bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: photon-drift 2.5s linear infinite;
+}
+
+/* ─── Status dot ────────────────────────────────────────────────────────── */
+.status-dot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 8px;
+}
+.status-dot .ping {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: spore-ping 1.8s ease-out infinite;
+}
+.status-dot .core {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Utility: circuit decoration line ─────────────────────────────────── */
+.circuit-accent {
+  position: relative;
+}
+.circuit-accent::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--lime) 25%,
+    var(--lime-dim) 75%,
+    transparent 100%
+  );
+  opacity: 0.22;
+}
+
+/* ─── Noise texture overlay ─────────────────────────────────────────────── */
+.noise-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  z-index: 9999;
 }

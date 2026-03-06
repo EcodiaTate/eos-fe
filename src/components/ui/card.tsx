@@ -8,14 +8,11 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, glow, ...props }, ref) => (
+  ({ className, glow, style, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(
-        "rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm",
-        glow && "shadow-[0_0_20px_rgba(255,255,255,0.03)]",
-        className,
-      )}
+      className={cn("card-solar", glow && "glow", className)}
+      style={style}
       {...props}
     />
   ),
@@ -24,14 +21,17 @@ Card.displayName = "Card";
 
 export function CardHeader({
   className,
+  style,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn(
-        "flex items-center justify-between px-4 py-3 border-b border-white/[0.06]",
-        className,
-      )}
+      className={cn("flex items-center justify-between", className)}
+      style={{
+        padding: "12px 16px 11px",
+        borderBottom: "1px solid var(--border)",
+        ...style,
+      }}
       {...props}
     />
   );
@@ -39,11 +39,24 @@ export function CardHeader({
 
 export function CardTitle({
   className,
+  style,
   ...props
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("text-sm font-medium text-white/80", className)}
+      className={cn(className)}
+      style={{
+        fontFamily: "var(--font-display)",
+        fontSize: 14,
+        fontWeight: 600,
+        color: "var(--ink)",
+        letterSpacing: "0.01em",
+        margin: 0,
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        ...style,
+      }}
       {...props}
     />
   );
@@ -51,7 +64,14 @@ export function CardTitle({
 
 export function CardContent({
   className,
+  style,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-4", className)} {...props} />;
+  return (
+    <div
+      className={cn(className)}
+      style={{ padding: "14px 16px", ...style }}
+      {...props}
+    />
+  );
 }

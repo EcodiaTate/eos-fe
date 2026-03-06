@@ -1,235 +1,200 @@
 "use client";
 
 import { useApi } from "@/hooks/use-api";
-import { api, type IncidentResponse } from "@/lib/api-client";
+import { api, type IncidentResponse, type CausalGraphResponse, type CausalEdge } from "@/lib/api-client";
+import { THYMOS_STANDARD_POLL_MS, THYMOS_HOMEOSTASIS_POLL_MS } from "@/lib/polling-constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 
-// Lazy load Three.js component to avoid SSR issues
 const Graph3D = dynamic(() => import("./Graph3D"), { ssr: false });
 
 export function CausalGraph() {
   const incidents = useApi<IncidentResponse[]>(() => api.thymosIncidents(100), {
-    intervalMs: 3000,
+    intervalMs: THYMOS_STANDARD_POLL_MS,
+  });
+  const graphData = useApi<CausalGraphResponse>(api.thymosCausalGraph, {
+    intervalMs: THYMOS_HOMEOSTASIS_POLL_MS,
   });
   const [selectedSystem, setSelectedSystem] = useState<string | null>(null);
 
-  if (!incidents.data) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-slate-400">Loading causal graph data...</div>
-      </div>
-    );
-  }
-
-  // Build system dependency graph
   const systems = useMemo(() => {
-    if (!incidents.data) return [];
-    const systemSet = new Set<string>();
-    incidents.data.forEach((i) => systemSet.add(i.source_system));
-    return Array.from(systemSet);
-  }, [incidents.data]);
+    if (graphData.data?.nodes) {
+      return graphData.data.nodes.map((n) => n.id);
+    }
+    return [...new Set((incidents.data ?? []).map((i) => i.source_system))];
+  }, [graphData.data, incidents.data]);
 
-  const systemIncidents = useMemo(() => {
-    if (!incidents.data) return {};
-    const map: Record<string, IncidentResponse[]> = {};
-    systems.forEach((sys) => {
-      map[sys] = incidents.data!.filter((i) => i.source_system === sys);
-    });
-    return map;
-  }, [incidents.data, systems]);
+  const edges: CausalEdge[] = graphData.data?.edges ?? [];
 
-  const cascadeChains = useMemo(() => {
-    if (!incidents.data) return [];
-    const chains: Array<{
-      primary: IncidentResponse;
-      cascade: IncidentResponse[];
-    }> = [];
-
-    incidents.data.forEach((incident, idx) => {
-      const laterIncidents = incidents.data!.slice(idx + 1, idx + 10);
-      const related = laterIncidents.filter((i) => {
-        const timeDiff = new Date(i.timestamp).getTime() - new Date(incident.timestamp).getTime();
-        return timeDiff < 5000 && timeDiff > 0;
-      });
-
-      if (related.length > 0) {
-        chains.push({
-          primary: incident,
-          cascade: related,
-        });
+  const nodeStats = useMemo(() => {
+    const map: Record<string, { count: number; maxSeverity: string }> = {};
+    if (graphData.data?.nodes) {
+      for (const n of graphData.data.nodes) {
+        map[n.id] = { count: n.incident_count, maxSeverity: n.max_severity };
       }
-    });
+    }
+    return map;
+  }, [graphData.data]);
 
-    return chains;
-  }, [incidents.data]);
+  const recentChains = graphData.data?.recent_chains ?? [];
 
-  // Calculate severity distribution
   const severityDist = useMemo(() => {
-    const dist: Record<string, number> = {
-      CRITICAL: 0,
-      HIGH: 0,
-      MEDIUM: 0,
-      LOW: 0,
-      INFO: 0,
-    };
-    if (incidents.data) {
-      incidents.data.forEach((i) => {
-        if (i.severity in dist) dist[i.severity]++;
-      });
+    const dist = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 };
+    for (const inc of incidents.data ?? []) {
+      if (inc.severity in dist) {
+        dist[inc.severity as keyof typeof dist]++;
+      }
     }
     return dist;
   }, [incidents.data]);
 
+  const totalSeverity = Object.values(severityDist).reduce((a, b) => a + b, 0);
+
+  const severityColors: Record<string, string> = {
+    CRITICAL: "bg-red-500",
+    HIGH: "bg-orange-500",
+    MEDIUM: "bg-yellow-500",
+    LOW: "bg-blue-500",
+    INFO: "bg-slate-400",
+  };
+
+  const maxSeverityRank = (sev: string): number => {
+    const rank: Record<string, number> = { CRITICAL: 5, HIGH: 4, MEDIUM: 3, LOW: 2, INFO: 1 };
+    return rank[sev] ?? 0;
+  };
+
   return (
-    <div className="space-y-6">
-      {/* 3D Graph Visualization */}
-      <Card className="bg-slate-700/30 border-slate-600 overflow-hidden">
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            System Dependency & Incident Causal Chain
-          </CardTitle>
-          <div className="text-xs text-slate-400 mt-2">
-            3D visualization of system interactions and failure cascades. Hover over nodes to explore.
-          </div>
+    <div className="space-y-4">
+      {/* 3D graph */}
+      <Card className="bg-slate-800 border-slate-600">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Causal Dependency Graph</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="h-96 bg-slate-800">
-            <Graph3D systems={systems} incidents={incidents.data} />
-          </div>
+        <CardContent className="h-96 p-0 rounded-b-lg overflow-hidden">
+          <Graph3D
+            systems={systems}
+            incidents={incidents.data ?? []}
+            edges={edges}
+          />
         </CardContent>
       </Card>
 
-      {/* System Overview */}
+      {/* System nodes */}
       <Card className="bg-slate-700/30 border-slate-600">
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Systems & Incident Counts</CardTitle>
+          <CardTitle className="text-sm font-medium">Systems ({systems.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {systems.map((sys) => {
-              const count = systemIncidents[sys].length;
-              const severity = systemIncidents[sys].reduce(
-                (max, i) => {
-                  const order = { CRITICAL: 5, HIGH: 4, MEDIUM: 3, LOW: 2, INFO: 1 };
-                  return Math.max(max, order[i.severity as keyof typeof order] || 0);
-                },
-                0
-              );
-
+              const stat = nodeStats[sys];
+              const maxSev = stat?.maxSeverity ?? "INFO";
+              const rank = maxSeverityRank(maxSev);
               return (
-                <div
+                <button
                   key={sys}
                   onClick={() => setSelectedSystem(selectedSystem === sys ? null : sys)}
                   className={cn(
-                    "p-3 rounded-lg border cursor-pointer transition-all",
+                    "p-3 rounded-lg border text-left transition-all",
                     selectedSystem === sys
-                      ? "bg-cyan-600/30 border-cyan-500 ring-2 ring-cyan-500/50"
-                      : "bg-slate-600/20 border-slate-600 hover:bg-slate-600/40"
+                      ? "border-cyan-500 bg-cyan-500/10"
+                      : "border-slate-600 bg-slate-700/30 hover:bg-slate-700/50"
                   )}
                 >
-                  <div className="font-semibold text-slate-200 text-sm capitalize">
-                    {sys}
-                  </div>
-                  <div className="text-2xl font-bold text-cyan-400 mt-1">
-                    {count}
-                  </div>
-                  <div className="text-xs text-slate-400 mt-1">
-                    incidents
-                  </div>
-                  {severity > 0 && (
-                    <div className="text-xs mt-2">
-                      <div
+                  <div className="font-mono text-sm text-slate-200 mb-1">{sys}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">
+                      {stat?.count ?? 0} incidents
+                    </span>
+                    {(stat?.count ?? 0) > 0 && (
+                      <Badge
                         className={cn(
-                          "inline-block px-2 py-0.5 rounded",
-                          severity >= 5
-                            ? "bg-red-600/30 text-red-300"
-                            : severity >= 4
-                            ? "bg-orange-600/30 text-orange-300"
-                            : severity >= 3
-                            ? "bg-yellow-600/30 text-yellow-300"
-                            : "bg-blue-600/30 text-blue-300"
+                          "text-xs border",
+                          rank >= 5
+                            ? "bg-red-500/20 text-red-300 border-red-500/50"
+                            : rank >= 4
+                            ? "bg-orange-500/20 text-orange-300 border-orange-500/50"
+                            : rank >= 3
+                            ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/50"
+                            : "bg-blue-500/20 text-blue-300 border-blue-500/50"
                         )}
                       >
-                        {["—", "INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"][
-                          severity
-                        ]}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                        {maxSev}
+                      </Badge>
+                    )}
+                  </div>
+                </button>
               );
             })}
           </div>
         </CardContent>
       </Card>
 
-      {/* Cascade Analysis */}
-      {cascadeChains.length > 0 && (
+      {/* Dependency edges */}
+      {edges.length > 0 && (
+        <Card className="bg-slate-700/30 border-slate-600">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Dependencies ({edges.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {edges.map((edge, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 text-xs bg-slate-800/40 rounded px-3 py-2"
+                >
+                  <span className="font-mono text-slate-300">{edge.source}</span>
+                  <span className="text-slate-500">→</span>
+                  <span className="font-mono text-slate-300">{edge.target}</span>
+                  <Badge className="ml-auto bg-slate-700 text-slate-400 border-slate-600 text-xs">
+                    {edge.type}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent causal chains */}
+      {recentChains.length > 0 && (
         <Card className="bg-slate-700/30 border-slate-600">
           <CardHeader>
             <CardTitle className="text-sm font-medium">
-              Detected Failure Cascades
+              Recent Causal Chains ({recentChains.length})
             </CardTitle>
-            <div className="text-xs text-slate-400 mt-1">
-              {cascadeChains.length} cascade chains where one incident likely triggered others
-            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {cascadeChains.slice(0, 5).map((chain, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 bg-slate-600/20 rounded border border-slate-600"
-                >
-                  <div className="font-semibold text-slate-200 text-sm mb-2">
-                    Cascade {idx + 1}
-                  </div>
-                  <div className="space-y-2">
-                    {/* Primary incident */}
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-red-600/30 flex items-center justify-center text-xs font-bold">
-                        1
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold text-slate-300">
-                          {chain.primary.source_system}
-                        </div>
-                        <div className="text-xs text-slate-400">
-                          {chain.primary.incident_class} ({chain.primary.severity})
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Arrow */}
-                    <div className="flex items-center justify-center">
-                      <div className="h-4 border-l-2 border-dashed border-slate-500" />
-                    </div>
-
-                    {/* Cascading incidents */}
-                    {chain.cascade.slice(0, 2).map((inc, cidx) => (
-                      <div key={cidx} className="flex items-center gap-2 ml-4">
-                        <div className="w-6 h-6 rounded-full bg-orange-600/30 flex items-center justify-center text-xs font-bold">
-                          {cidx + 2}
-                        </div>
-                        <div>
-                          <div className="text-xs font-semibold text-slate-300">
-                            {inc.source_system}
-                          </div>
-                          <div className="text-xs text-slate-400">
-                            {inc.incident_class}
-                          </div>
-                        </div>
+              {recentChains.slice(0, 5).map((chain, idx) => (
+                <div key={idx} className="bg-slate-800/40 rounded p-3">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {chain.chain.map((step, stepIdx) => (
+                      <div key={stepIdx} className="flex items-center gap-1">
+                        <span
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded font-mono",
+                            step === chain.root_system
+                              ? "bg-red-500/20 text-red-300"
+                              : "bg-slate-700 text-slate-200"
+                          )}
+                        >
+                          {step}
+                        </span>
+                        {stepIdx < chain.chain.length - 1 && (
+                          <span className="text-slate-500 text-xs">→</span>
+                        )}
                       </div>
                     ))}
-                    {chain.cascade.length > 2 && (
-                      <div className="text-xs text-slate-400 ml-4">
-                        +{chain.cascade.length - 2} more incidents
-                      </div>
-                    )}
+                    <span className="ml-auto text-xs text-slate-500">
+                      {(chain.confidence * 100).toFixed(0)}% confidence
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Root: <span className="text-slate-300">{chain.root_system}</span>
                   </div>
                 </div>
               ))}
@@ -238,48 +203,25 @@ export function CausalGraph() {
         </Card>
       )}
 
-      {/* Severity Heat Map */}
+      {/* Severity distribution */}
       <Card className="bg-slate-700/30 border-slate-600">
         <CardHeader>
           <CardTitle className="text-sm font-medium">Severity Distribution</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {Object.entries(severityDist).map(([severity, count]) => (
-              <div key={severity} className="flex items-center gap-3">
-                <div
-                  className={cn(
-                    "w-2 h-2 rounded-full",
-                    {
-                      "bg-red-500": severity === "CRITICAL",
-                      "bg-orange-500": severity === "HIGH",
-                      "bg-yellow-500": severity === "MEDIUM",
-                      "bg-blue-500": severity === "LOW",
-                      "bg-slate-500": severity === "INFO",
-                    }
-                  )}
-                />
-                <span className="text-sm text-slate-300 w-16">{severity}</span>
-                <div className="flex-1 h-2 bg-slate-600 rounded-full overflow-hidden">
+          <div className="space-y-2">
+            {Object.entries(severityDist).map(([sev, count]) => (
+              <div key={sev} className="flex items-center gap-3">
+                <span className="text-xs text-slate-400 w-16">{sev}</span>
+                <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
                   <div
-                    className={cn(
-                      "h-full transition-all",
-                      {
-                        "bg-red-500": severity === "CRITICAL",
-                        "bg-orange-500": severity === "HIGH",
-                        "bg-yellow-500": severity === "MEDIUM",
-                        "bg-blue-500": severity === "LOW",
-                        "bg-slate-500": severity === "INFO",
-                      }
-                    )}
+                    className={cn("h-full rounded-full transition-all", severityColors[sev])}
                     style={{
-                      width: `${(count / Math.max(...Object.values(severityDist))) * 100}%`,
+                      width: totalSeverity > 0 ? `${(count / totalSeverity) * 100}%` : "0%",
                     }}
                   />
                 </div>
-                <span className="text-sm font-semibold text-slate-300 w-8">
-                  {count}
-                </span>
+                <span className="text-xs text-slate-400 w-6 text-right">{count}</span>
               </div>
             ))}
           </div>
@@ -288,28 +230,23 @@ export function CausalGraph() {
 
       {/* Legend */}
       <Card className="bg-slate-700/30 border-slate-600">
-        <CardHeader>
-          <CardTitle className="text-xs font-medium text-slate-400 uppercase tracking-wide">
-            Graph Legend
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap gap-4 text-xs text-slate-400">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-cyan-500" />
+              <div className="w-3 h-3 rounded-full bg-cyan-400" />
               <span>System node</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span>Critical incident</span>
+              <span>CRITICAL incidents</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-orange-500" />
-              <span>High severity</span>
+              <span>HIGH incidents</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-1 bg-gradient-to-r from-slate-400 to-slate-600" />
-              <span>System dependency edge</span>
+              <div className="w-8 h-0.5 bg-gradient-to-r from-slate-500 to-slate-400" />
+              <span>Dependency edge</span>
             </div>
           </div>
         </CardContent>

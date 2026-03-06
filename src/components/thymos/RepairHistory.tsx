@@ -2,6 +2,7 @@
 
 import { useApi } from "@/hooks/use-api";
 import { api, type RepairResponse } from "@/lib/api-client";
+import { THYMOS_STANDARD_POLL_MS } from "@/lib/polling-constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
@@ -9,7 +10,7 @@ import { useState } from "react";
 
 export function RepairHistory() {
   const repairs = useApi<RepairResponse[]>(() => api.thymosRepairs(100), {
-    intervalMs: 3000,
+    intervalMs: THYMOS_STANDARD_POLL_MS,
   });
   const [sortBy, setSortBy] = useState<"recent" | "tier" | "success">("recent");
 

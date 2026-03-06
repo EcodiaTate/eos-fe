@@ -88,14 +88,14 @@ export const MODE_PRESETS: Record<AliveMode, ModePreset> = {
  * inherit from MODE_PRESETS.dreaming.
  */
 const DREAM_STAGE_OVERRIDES: Partial<Record<SleepStage, Partial<ModePreset>>> = {
-  hypnagogia: {
+  descent: {
     coreScaleMultiplier: 0.95,
     bloomIntensity: 1.8,
     auraOpacity: 0.5,
     pulseRateMultiplier: 0.5,
     saturation: 0.7,
   },
-  nrem: {
+  slow_wave: {
     coreScaleMultiplier: 0.85,
     bloomIntensity: 2.0,
     auraOpacity: 0.9,
@@ -125,7 +125,7 @@ const DREAM_STAGE_OVERRIDES: Partial<Record<SleepStage, Partial<ModePreset>>> = 
     tendrilReachBoost: 0.15,
     saturation: 0.6,
   },
-  hypnopompia: {
+  emergence: {
     coreScaleMultiplier: 0.92,
     bloomIntensity: 2.2,
     auraOpacity: 0.6,

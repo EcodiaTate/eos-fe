@@ -18,18 +18,42 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div
-      className={cn(
-        "flex items-start justify-between gap-4 pb-6",
-        className,
-      )}
+      className={cn("flex items-start justify-between gap-4", className)}
+      style={{ paddingBottom: 24, marginBottom: 4 }}
     >
       <div>
-        <h1 className="text-lg font-semibold text-white/90">{title}</h1>
+        <h1
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 28,
+            fontWeight: 700,
+            color: "#f1f5f9",
+            margin: 0,
+            letterSpacing: "-0.02em",
+            lineHeight: 1.2,
+          }}
+        >
+          {title}
+        </h1>
         {description && (
-          <p className="mt-0.5 text-sm text-white/35">{description}</p>
+          <p
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: 13,
+              color: "#cbd5e1",
+              margin: "8px 0 0",
+              letterSpacing: "0.02em",
+            }}
+          >
+            {description}
+          </p>
         )}
       </div>
-      {children && <div className="flex items-center gap-2">{children}</div>}
+      {children && (
+        <div className="flex items-center gap-2" style={{ paddingTop: 2 }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }

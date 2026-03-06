@@ -5,9 +5,11 @@
  * Uses React Three Fiber, matching the OrganismCore pattern.
  *
  * - WAKE: hidden (returns null)
- * - NREM: slow, deep blue pulsing particles (memory consolidation)
+ * - DESCENT: slow, violet fading-in particles (entering sleep)
+ * - SLOW_WAVE: slow, deep blue pulsing particles (memory consolidation)
  * - REM: colorful, fast, chaotic particles connecting (dreaming)
- * - LUCID: bright, structured, golden connections
+ * - LUCID: bright, structured, golden connections (REM sub-mode)
+ * - EMERGENCE: slow, fading-out orange particles (waking)
  *
  * Shader uniforms: dreamStage, coherence, affect
  */
@@ -25,7 +27,7 @@ import { api, type OneirosHealthResponse } from "@/lib/api-client";
 
 const dreamVertexShader = /* glsl */ `
 uniform float uTime;
-uniform float uStage;     // 0=NREM, 1=REM, 2=LUCID
+uniform float uStage;     // 0=SLOW_WAVE, 1=REM, 2=LUCID
 uniform float uCoherence;
 uniform float uAffect;
 
@@ -89,7 +91,7 @@ void main() {
 
   vec3 pos = position;
 
-  // NREM: slow, deep breathing motion
+  // SLOW_WAVE: slow, deep breathing motion
   float nremSpeed = 0.3;
   float nremDisplace = snoise(pos * 0.5 + uTime * nremSpeed) * 0.3;
 
@@ -120,7 +122,7 @@ void main() {
   float dist = length(pos);
   vAlpha = smoothstep(3.0, 0.5, dist) * (0.4 + uCoherence * 0.6);
 
-  // Size varies by stage: NREM=larger/softer, REM=medium/varied, LUCID=smaller/bright
+  // Size varies by stage: SLOW_WAVE=larger/softer, REM=medium/varied, LUCID=smaller/bright
   float stageSize = mix(mix(3.0, 2.0, clamp(uStage, 0.0, 1.0)), 1.5, clamp(uStage - 1.0, 0.0, 1.0));
   gl_PointSize = stageSize * (1.0 + aRandom * 0.5);
 
@@ -142,7 +144,7 @@ void main() {
   if (dist > 0.5) discard;
   float alpha = smoothstep(0.5, 0.15, dist) * vAlpha;
 
-  // NREM: deep blue/indigo
+  // SLOW_WAVE: deep blue/indigo
   vec3 nremColor = mix(
     vec3(0.1, 0.15, 0.45),
     vec3(0.2, 0.25, 0.65),
@@ -250,8 +252,9 @@ function DreamParticles({ stage, coherence, affect }: DreamParticlesProps) {
 
 function stageToFloat(stage: string): number {
   switch (stage.toUpperCase()) {
-    case "NREM":
-    case "HYPNAGOGIA":
+    case "DESCENT":
+    case "SLOW_WAVE":
+    case "EMERGENCE":
       return 0;
     case "REM":
       return 1;
@@ -333,11 +336,11 @@ export function DreamVisualization() {
       <div className="absolute bottom-3 left-3 flex items-center gap-2">
         <div className="h-2 w-2 rounded-full bg-current animate-pulse text-indigo-400" />
         <span className="text-[11px] font-medium text-white/40">
-          {stage === "NREM" && "Consolidating memories..."}
+          {stage === "DESCENT" && "Entering sleep..."}
+          {stage === "SLOW_WAVE" && "Consolidating memories..."}
           {stage === "REM" && "Dreaming..."}
           {stage === "LUCID" && "Lucid exploration..."}
-          {stage === "HYPNAGOGIA" && "Entering sleep..."}
-          {stage === "HYPNOPOMPIA" && "Emerging from sleep..."}
+          {stage === "EMERGENCE" && "Emerging from sleep..."}
         </span>
       </div>
     </div>

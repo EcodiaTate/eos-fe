@@ -4,6 +4,8 @@ import { useApi } from "@/hooks/use-api";
 import {
   api,
   type AffectResponse,
+  type EISHealthResponse,
+  type EISStatsResponse,
   type FileWatcherStatsResponse,
   type SchedulerStatsResponse,
   type WorkspaceDetailResponse,
@@ -13,7 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WorkspaceStream } from "@/components/alive/WorkspaceStream";
 import { useState, useCallback } from "react";
-import { cn } from "@/lib/cn";
 
 export default function PerceptionPage() {
   const affect = useApi<AffectResponse>(api.affect, { intervalMs: 2000 });
@@ -26,6 +27,8 @@ export default function PerceptionPage() {
   const workspaceDetail = useApi<WorkspaceDetailResponse>(api.workspaceDetail, {
     intervalMs: 2000,
   });
+  const eisHealth = useApi<EISHealthResponse>(api.eisHealth, { intervalMs: 10000 });
+  const eisStats = useApi<EISStatsResponse>(api.eisStats, { intervalMs: 2000 });
 
   // Axon outcome percepts re-entering Atune — source="internal:axon"
   const axonFeedbackItems = (workspaceDetail.data?.workspace_items ?? []).filter(
@@ -75,21 +78,23 @@ export default function PerceptionPage() {
   }, [eventText, eventChannel]);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
       <PageHeader
         title="Perception"
         description="Atune — attention, salience, and the global workspace"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))", gap: "24px" }}>
         {/* Affect */}
-        <Card glow>
+        <Card className="float-up float-up-1">
           <CardHeader>
-            <CardTitle>Current Affect</CardTitle>
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}>
+              ◉ Current Affect
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {affect.data ? (
-              <div className="space-y-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {[
                   {
                     label: "Valence",
@@ -106,11 +111,11 @@ export default function PerceptionPage() {
                     desc: "Alertness",
                   },
                   {
-                    label: "Dominance",
-                    value: affect.data.dominance,
+                    label: "Confidence",
+                    value: affect.data.confidence,
                     min: 0,
                     max: 1,
-                    desc: "Control",
+                    desc: "Generative model fit",
                   },
                   {
                     label: "Curiosity",
@@ -138,19 +143,24 @@ export default function PerceptionPage() {
                     ((dim.value - dim.min) / (dim.max - dim.min)) * 100;
                   return (
                     <div key={dim.label}>
-                      <div className="flex items-baseline justify-between mb-1">
-                        <div className="text-xs text-white/50">{dim.label}</div>
-                        <div className="text-xs text-white/30">{dim.desc}</div>
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "4px" }}>
+                        <div style={{ fontSize: "9px", fontFamily: "var(--font-body)", color: "var(--ink-strong)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>{dim.label}</div>
+                        <div style={{ fontSize: "9px", color: "var(--ink-muted)" }}>{dim.desc}</div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 rounded-full bg-white/[0.05]">
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ flex: 1, height: "6px", borderRadius: "3px", background: "var(--border)", overflow: "hidden" }}>
                           <div
-                            className="h-full rounded-full bg-teal-400/50 transition-all duration-700"
-                            style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
+                            style={{
+                              height: "100%",
+                              borderRadius: "3px",
+                              background: "var(--lime-bright)",
+                              width: `${Math.max(0, Math.min(100, pct))}%`,
+                              transition: "width 700ms ease-out",
+                            }}
                           />
                         </div>
-                        <div className="text-xs text-white/50 tabular-nums w-12 text-right">
-                          {dim.value.toFixed(3)}
+                        <div style={{ fontSize: "9px", color: "var(--ink-strong)", fontFamily: "var(--font-body)", width: "32px", textAlign: "right" }}>
+                          {(dim.value ?? 0).toFixed(3)}
                         </div>
                       </div>
                     </div>
@@ -158,16 +168,18 @@ export default function PerceptionPage() {
                 })}
               </div>
             ) : (
-              <div className="text-sm text-white/20">Loading...</div>
+              <div style={{ fontSize: "14px", color: "var(--ink-muted)" }}>Loading...</div>
             )}
           </CardContent>
         </Card>
 
         {/* Global Workspace — real-time via WorkspaceStream */}
-        <Card>
+        <Card className="float-up float-up-2">
           <CardHeader>
-            <CardTitle>Global Workspace</CardTitle>
-            <span className="text-[10px] text-white/20">
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}>
+              ◎ Global Workspace
+            </CardTitle>
+            <span style={{ fontSize: "9px", color: "var(--ink-muted)" }}>
               live · updated every cycle
             </span>
           </CardHeader>
@@ -177,19 +189,22 @@ export default function PerceptionPage() {
         </Card>
 
         {/* Feedback Loop */}
-        <Card className="md:col-span-2">
+        <Card className="float-up float-up-3" style={{ gridColumn: "1 / -1" }}>
           <CardHeader>
-            <CardTitle>Feedback Loop</CardTitle>
-            <div className="flex items-center gap-2">
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}>
+              ↑ Feedback Loop
+            </CardTitle>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div
-                className={cn(
-                  "h-2 w-2 rounded-full",
-                  hasAxonFeedback
-                    ? "bg-teal-400 animate-pulse"
-                    : "bg-white/10",
-                )}
+                className={hasAxonFeedback ? "spore-ping" : undefined}
+                style={{
+                  height: "6px",
+                  width: "6px",
+                  borderRadius: "50%",
+                  background: hasAxonFeedback ? "var(--lime-bright)" : "var(--border)",
+                }}
               />
-              <span className="text-[10px] text-white/20">
+              <span style={{ fontSize: "9px", color: "var(--ink-muted)" }}>
                 {hasAxonFeedback
                   ? "Axon outcomes re-entering Atune"
                   : "Awaiting first action outcome"}
@@ -198,28 +213,33 @@ export default function PerceptionPage() {
           </CardHeader>
           <CardContent>
             {hasAxonFeedback ? (
-              <div className="space-y-1.5">
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 {axonFeedbackItems.map((item, i) => (
                   <div
                     key={item.broadcast_id || i}
-                    className="rounded-lg border border-teal-400/10 bg-teal-400/[0.03] px-3 py-2"
+                    style={{
+                      borderRadius: "7px",
+                      border: "1px solid var(--border)",
+                      background: "var(--bg)",
+                      padding: "12px",
+                    }}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-1.5">
-                        <Badge variant="info">axon</Badge>
-                        <Badge variant="muted">system_event</Badge>
+                    <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: "8px", marginBottom: "4px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Badge variant="success">axon</Badge>
+                        <Badge variant="info">system_event</Badge>
                       </div>
-                      <span className="text-[10px] text-white/25 tabular-nums shrink-0">
+                      <span style={{ fontSize: "9px", color: "var(--ink-muted)", fontFamily: "var(--font-body)" }}>
                         {item.salience.toFixed(3)}
                       </span>
                     </div>
                     {item.content && (
-                      <p className="text-xs text-white/50 leading-relaxed">
+                      <p style={{ fontSize: "13px", color: "var(--ink)", fontFamily: "var(--font-prose)", lineHeight: "1.5" }}>
                         {item.content}
                       </p>
                     )}
                     {item.timestamp && (
-                      <div className="mt-1 text-[10px] text-white/20">
+                      <div style={{ marginTop: "4px", fontSize: "9px", color: "var(--ink-muted)" }}>
                         {new Date(item.timestamp).toLocaleTimeString()}
                       </div>
                     )}
@@ -227,9 +247,9 @@ export default function PerceptionPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center py-6 text-center">
-                <div className="text-xl opacity-10 mb-2">⟳</div>
-                <p className="text-xs text-white/20 max-w-xs">
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 0", textAlign: "center" }}>
+                <div style={{ fontSize: "24px", opacity: 0.3, marginBottom: "8px" }}>⟳</div>
+                <p style={{ fontSize: "13px", color: "var(--ink-muted)", maxWidth: "320px", fontFamily: "var(--font-prose)" }}>
                   When Axon executes an action, the outcome re-enters Atune as a
                   self-percept. That cycle closes the active inference loop.
                 </p>
@@ -239,20 +259,31 @@ export default function PerceptionPage() {
         </Card>
 
         {/* Event Injection */}
-        <Card className="md:col-span-2">
+        <Card className="float-up float-up-4" style={{ gridColumn: "1 / -1" }}>
           <CardHeader>
-            <CardTitle>Inject Percept</CardTitle>
-            <span className="text-[10px] text-white/20">
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}>
+              ⚡ Inject Percept
+            </CardTitle>
+            <span style={{ fontSize: "9px", color: "var(--ink-muted)" }}>
               Send a structured event through the perception pipeline
             </span>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex gap-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", gap: "8px" }}>
                 <select
                   value={eventChannel}
                   onChange={(e) => setEventChannel(e.target.value)}
-                  className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-white/60"
+                  style={{
+                    borderRadius: "7px",
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    padding: "8px 12px",
+                    fontSize: "13px",
+                    color: "var(--ink)",
+                    fontFamily: "var(--font-body)",
+                    minWidth: "140px",
+                  }}
                 >
                   {[
                     "text_chat",
@@ -276,25 +307,51 @@ export default function PerceptionPage() {
                     if (e.key === "Enter") injectEvent();
                   }}
                   placeholder="Event content..."
-                  className={cn(
-                    "flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-white/90",
-                    "placeholder:text-white/20 focus:border-white/15 focus:outline-none",
-                  )}
+                  style={{
+                    flex: 1,
+                    borderRadius: "7px",
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    padding: "8px 12px",
+                    fontSize: "13px",
+                    color: "var(--ink)",
+                    fontFamily: "var(--font-body)",
+                  }}
                 />
                 <button
                   onClick={injectEvent}
                   disabled={!eventText.trim() || injecting}
-                  className={cn(
-                    "rounded-lg border border-white/[0.08] bg-white/[0.06] px-4 py-2 text-sm text-white/60",
-                    "hover:bg-white/[0.1] disabled:opacity-30 disabled:pointer-events-none",
-                  )}
+                  style={{
+                    borderRadius: "7px",
+                    border: "1px solid var(--border)",
+                    background: !eventText.trim() || injecting ? "var(--bg)" : "var(--lime-bright)",
+                    color: !eventText.trim() || injecting ? "var(--ink-muted)" : "var(--ink-strong)",
+                    padding: "8px 16px",
+                    fontSize: "13px",
+                    fontFamily: "var(--font-body)",
+                    fontWeight: 600,
+                    cursor: !eventText.trim() || injecting ? "not-allowed" : "pointer",
+                    opacity: !eventText.trim() || injecting ? 0.5 : 1,
+                    transition: "all 200ms ease",
+                  }}
                 >
                   {injecting ? "..." : "Inject"}
                 </button>
               </div>
 
               {injectResult && (
-                <pre className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 text-xs text-white/50 overflow-auto max-h-48">
+                <pre style={{
+                  borderRadius: "7px",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  padding: "12px",
+                  fontSize: "11px",
+                  color: "var(--ink-muted)",
+                  fontFamily: "var(--font-body)",
+                  overflowX: "auto",
+                  maxHeight: "192px",
+                  overflowY: "auto",
+                }}>
                   {injectResult}
                 </pre>
               )}
@@ -302,10 +359,135 @@ export default function PerceptionPage() {
           </CardContent>
         </Card>
 
-        {/* File Watcher */}
-        <Card>
+        {/* Epistemic Immune System */}
+        <Card className="float-up float-up-5" style={{ gridColumn: "1 / -1" }}>
           <CardHeader>
-            <CardTitle>File Watcher</CardTitle>
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}>
+              ◈ Epistemic Immune System
+            </CardTitle>
+            {eisHealth.data && (
+              <Badge
+                variant={
+                  eisHealth.data.status === "healthy"
+                    ? "success"
+                    : eisHealth.data.status === "degraded"
+                      ? "warning"
+                      : "muted"
+                }
+              >
+                {eisHealth.data.status}
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Zone bar */}
+            {eisHealth.data?.zone_config ? (() => {
+              const zones: { key: string; label: string; color: string }[] = [
+                { key: "clean", label: "Clean", color: "var(--lime-bright)" },
+                { key: "elevated", label: "Elevated", color: "var(--gold-bright)" },
+                { key: "antigenic_zone", label: "Antigenic", color: "#e66533" },
+                { key: "known_attack", label: "Attack", color: "#d84e4e" },
+              ];
+              const zc = eisHealth.data.zone_config;
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ position: "relative", height: "24px", borderRadius: "7px", overflow: "hidden", display: "flex" }}>
+                    {zones.map(({ key, label, color }) => {
+                      const zone = zc[key];
+                      if (!zone) return null;
+                      const width = (zone.upper - zone.lower) * 100;
+                      const left = zone.lower * 100;
+                      return (
+                        <div
+                          key={key}
+                          style={{
+                            width: `${width}%`,
+                            marginLeft: key === zones[0].key ? `${left}%` : undefined,
+                            background: color,
+                            opacity: 0.15,
+                            borderRight: "1px solid var(--border)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          title={`${label}: ${zone.lower.toFixed(2)}–${zone.upper.toFixed(2)}`}
+                        >
+                          <span style={{ fontSize: "9px", fontWeight: 600, color: color, truncate: "true", padding: "0 4px", fontFamily: "var(--font-body)" }}>
+                            {label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "var(--ink-muted)", paddingX: "2px", fontFamily: "var(--font-body)" }}>
+                    <span>0.0</span>
+                    {zones.map(({ key }) => {
+                      const zone = zc[key];
+                      return zone ? (
+                        <span key={key}>{zone.upper.toFixed(2)}</span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              );
+            })() : (
+              <div style={{ height: "24px", borderRadius: "7px", background: "var(--border)", animation: "data-tick 2s ease-in-out infinite" }} />
+            )}
+
+            {/* Stat pills + rates */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                {(
+                  [
+                    { key: "passed", label: "Passed", variant: "success" },
+                    { key: "elevated", label: "Elevated", variant: "warning" },
+                    { key: "quarantined", label: "Quarantined", variant: "warning" },
+                    { key: "blocked", label: "Blocked", variant: "danger" },
+                  ] as { key: keyof EISStatsResponse; label: string; variant: "success" | "warning" | "danger" }[]
+                ).map(({ key, label, variant }) => (
+                  <div key={key} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span style={{ fontSize: "9px", fontFamily: "var(--font-body)", fontWeight: 600, color: "var(--ink-strong)" }}>
+                      {eisStats.data ? (eisStats.data[key] as number).toLocaleString() : "—"}
+                    </span>
+                    <Badge variant={variant}>{label}</Badge>
+                  </div>
+                ))}
+              </div>
+              {eisStats.data && (
+                <div style={{ display: "flex", alignItems: "center", gap: "20px", flexShrink: 0 }}>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "9px", color: "var(--ink-muted)", fontFamily: "var(--font-body)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pass rate</div>
+                    <div style={{ fontSize: "14px", color: "var(--lime-bright)", fontFamily: "var(--font-body)", fontWeight: 600 }}>
+                      {(eisStats.data.pass_rate * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "9px", color: "var(--ink-muted)", fontFamily: "var(--font-body)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Block rate</div>
+                    <div style={{ fontSize: "14px", color: "#d84e4e", fontFamily: "var(--font-body)", fontWeight: 600 }}>
+                      {(eisStats.data.block_rate * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {eisHealth.data && (
+              <div style={{ display: "flex", gap: "16px", fontSize: "9px", color: "var(--ink-muted)", paddingTop: "4px", borderTop: "1px solid var(--border)", fontFamily: "var(--font-body)" }}>
+                <span>midpoint <span style={{ color: "var(--ink-strong)" }}>{eisHealth.data.sigmoid_midpoint}</span></span>
+                <span>floor <span style={{ color: "var(--ink-strong)" }}>{eisHealth.data.belief_floor}</span></span>
+                <span>salience gain <span style={{ color: "var(--ink-strong)" }}>{eisHealth.data.risk_salience_gain}</span></span>
+                <span>screened <span style={{ color: "var(--ink-strong)" }}>{eisHealth.data.screened_total?.toLocaleString() ?? "—"}</span></span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* File Watcher */}
+        <Card className="float-up float-up-6">
+          <CardHeader>
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}>
+              ≡ File Watcher
+            </CardTitle>
             {fileWatcher.data && (
               <Badge variant={fileWatcher.data.running ? "success" : "muted"}>
                 {fileWatcher.data.running ? "running" : "stopped"}
@@ -314,46 +496,43 @@ export default function PerceptionPage() {
           </CardHeader>
           <CardContent>
             {fileWatcher.data ? (
-              <div className="space-y-3">
-                <div className="text-[10px] text-white/25 font-mono truncate">
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ fontSize: "9px", color: "var(--ink-muted)", fontFamily: "var(--font-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {fileWatcher.data.watch_dir}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-[10px] text-white/25">Ingested</div>
-                    <div className="text-sm text-teal-400/80 tabular-nums font-medium">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div style={{ background: "var(--bg)", padding: "8px", borderRadius: "7px", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "9px", color: "var(--ink-muted)", fontFamily: "var(--font-body)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Ingested</div>
+                    <div style={{ fontSize: "14px", color: "var(--lime-bright)", fontFamily: "var(--font-body)", fontWeight: 600, marginTop: "4px" }}>
                       {fileWatcher.data.ingested.toLocaleString()}
                     </div>
                   </div>
-                  <div>
-                    <div className="text-[10px] text-white/25">Failed</div>
-                    <div className={cn(
-                      "text-sm tabular-nums font-medium",
-                      fileWatcher.data.failed > 0
-                        ? "text-rose-400/80"
-                        : "text-white/40",
-                    )}>
+                  <div style={{ background: "var(--bg)", padding: "8px", borderRadius: "7px", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "9px", color: "var(--ink-muted)", fontFamily: "var(--font-body)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Failed</div>
+                    <div style={{ fontSize: "14px", color: fileWatcher.data.failed > 0 ? "#d84e4e" : "var(--ink-muted)", fontFamily: "var(--font-body)", fontWeight: 600, marginTop: "4px" }}>
                       {fileWatcher.data.failed.toLocaleString()}
                     </div>
                   </div>
                 </div>
-                <p className="text-[11px] text-white/30 leading-relaxed">
-                  Drop <code className="text-white/50">.txt</code> or{" "}
-                  <code className="text-white/50">.md</code> files into the
+                <p style={{ fontSize: "12px", color: "var(--ink-mid)", fontFamily: "var(--font-prose)", lineHeight: "1.5" }}>
+                  Drop <code style={{ background: "var(--bg)", padding: "2px 4px", borderRadius: "3px", fontFamily: "var(--font-body)", color: "var(--ink-strong)" }}>.txt</code> or{" "}
+                  <code style={{ background: "var(--bg)", padding: "2px 4px", borderRadius: "3px", fontFamily: "var(--font-body)", color: "var(--ink-strong)" }}>.md</code> files into the
                   watched directory to inject percepts. Files are consumed on
                   ingest.
                 </p>
               </div>
             ) : (
-              <div className="text-sm text-white/20">Loading...</div>
+              <div style={{ fontSize: "14px", color: "var(--ink-muted)" }}>Loading...</div>
             )}
           </CardContent>
         </Card>
 
         {/* Scheduler */}
-        <Card>
+        <Card className="float-up float-up-7">
           <CardHeader>
-            <CardTitle>Perception Scheduler</CardTitle>
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}>
+              ▣ Perception Scheduler
+            </CardTitle>
             {scheduler.data && (
               <Badge variant={scheduler.data.running ? "success" : "muted"}>
                 {scheduler.data.running ? "running" : "stopped"}
@@ -362,17 +541,22 @@ export default function PerceptionPage() {
           </CardHeader>
           <CardContent>
             {scheduler.data ? (
-              <div className="space-y-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {Object.keys(scheduler.data.tasks).length > 0 ? (
-                  <div className="space-y-1.5">
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     {Object.entries(scheduler.data.tasks).map(
                       ([name, task]) => (
                         <div
                           key={name}
-                          className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2"
+                          style={{
+                            borderRadius: "7px",
+                            border: "1px solid var(--border)",
+                            background: "var(--bg)",
+                            padding: "8px 12px",
+                          }}
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs text-white/70 font-mono">
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                            <span style={{ fontSize: "12px", color: "var(--ink)", fontFamily: "var(--font-body)" }}>
                               {name}
                             </span>
                             <Badge
@@ -381,15 +565,15 @@ export default function PerceptionPage() {
                               {task.active ? "active" : "idle"}
                             </Badge>
                           </div>
-                          <div className="mt-1.5 flex gap-3">
-                            <span className="text-[10px] text-white/25">
+                          <div style={{ marginTop: "6px", display: "flex", gap: "12px" }}>
+                            <span style={{ fontSize: "9px", color: "var(--ink-muted)", fontFamily: "var(--font-body)" }}>
                               every {task.interval_seconds}s
                             </span>
-                            <span className="text-[10px] text-white/25">
+                            <span style={{ fontSize: "9px", color: "var(--ink-muted)", fontFamily: "var(--font-body)" }}>
                               {task.run_count} runs
                             </span>
                             {task.error_count > 0 && (
-                              <span className="text-[10px] text-rose-400/60">
+                              <span style={{ fontSize: "9px", color: "#d84e4e", fontFamily: "var(--font-body)" }}>
                                 {task.error_count} errors
                               </span>
                             )}
@@ -399,17 +583,27 @@ export default function PerceptionPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="text-xs text-white/20 text-center py-2">
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div style={{ fontSize: "12px", color: "var(--ink-muted)", textAlign: "center", padding: "8px 0", fontFamily: "var(--font-prose)" }}>
                       No tasks registered.
                     </div>
                     <button
                       onClick={registerSelfClock}
                       disabled={registeringTask}
-                      className={cn(
-                        "w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-white/50",
-                        "hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none",
-                      )}
+                      style={{
+                        width: "100%",
+                        borderRadius: "7px",
+                        border: "1px solid var(--border)",
+                        background: registeringTask ? "var(--bg)" : "var(--lime-bright)",
+                        color: registeringTask ? "var(--ink-muted)" : "var(--ink-strong)",
+                        padding: "8px 12px",
+                        fontSize: "12px",
+                        fontFamily: "var(--font-body)",
+                        fontWeight: 600,
+                        cursor: registeringTask ? "not-allowed" : "pointer",
+                        opacity: registeringTask ? 0.5 : 1,
+                        transition: "all 200ms ease",
+                      }}
                     >
                       {registeringTask ? "Registering..." : "+ Register self-clock task"}
                     </button>
@@ -417,13 +611,24 @@ export default function PerceptionPage() {
                 )}
 
                 {registerResult && (
-                  <pre className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2 text-[10px] text-white/40 overflow-auto max-h-24">
+                  <pre style={{
+                    borderRadius: "7px",
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    padding: "8px",
+                    fontSize: "10px",
+                    color: "var(--ink-muted)",
+                    fontFamily: "var(--font-body)",
+                    overflowX: "auto",
+                    maxHeight: "96px",
+                    overflowY: "auto",
+                  }}>
                     {registerResult}
                   </pre>
                 )}
               </div>
             ) : (
-              <div className="text-sm text-white/20">Loading...</div>
+              <div style={{ fontSize: "14px", color: "var(--ink-muted)" }}>Loading...</div>
             )}
           </CardContent>
         </Card>

@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
+import { stageHex } from "@/lib/oneiros-stages";
 
 function StatusBadge({ status }: { status: string }) {
   const variant =
@@ -43,12 +44,12 @@ function AffectBar({
   max?: number;
   color: string;
 }) {
-  const pct = ((value - min) / (max - min)) * 100;
+  const pct = (((value ?? 0) - min) / (max - min)) * 100;
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
         <span className="text-white/40">{label}</span>
-        <span className="text-white/60 tabular-nums">{value.toFixed(3)}</span>
+        <span className="text-white/60 tabular-nums">{(value ?? 0).toFixed(3)}</span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-white/[0.05]">
         <div
@@ -76,17 +77,6 @@ function SystemCard({
   );
 }
 
-function stageColor(stage: string): string {
-  switch (stage) {
-    case "nrem": return "#818cf8";     // Indigo
-    case "rem": return "#e879f9";      // Fuchsia
-    case "lucid": return "#fbbf24";    // Amber
-    case "hypnagogia": return "#a78bfa"; // Violet
-    case "hypnopompia": return "#fb923c"; // Orange
-    default: return "#38bdf8";           // Sky (wake)
-  }
-}
-
 function OneirosCard({ data }: { data: OneirosHealthResponse | null }) {
   if (!data) return <div className="text-sm text-white/20">Loading...</div>;
 
@@ -107,7 +97,7 @@ function OneirosCard({ data }: { data: OneirosHealthResponse | null }) {
             "h-2.5 w-2.5 rounded-full",
             isSleeping && "animate-pulse",
           )}
-          style={{ background: stageColor(data.current_stage) }}
+          style={{ background: stageHex(data.current_stage) }}
         />
         <span className="text-sm text-white/70 font-medium capitalize">
           {data.current_stage.replace("_", " ")}
@@ -215,8 +205,8 @@ export default function DashboardPage() {
                   color="#ef4444"
                 />
                 <AffectBar
-                  label="Dominance"
-                  value={affect.data.dominance}
+                  label="Confidence"
+                  value={affect.data.confidence}
                   color="#818cf8"
                 />
               </>

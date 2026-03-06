@@ -73,7 +73,7 @@ export default function EvolutionPage() {
             <div className="space-y-2">
               {history.data.records.map((record) => (
                 <div
-                  key={record.proposal_id}
+                  key={`${record.proposal_id}-${record.applied_at}`}
                   className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
                 >
                   {/* Header row */}

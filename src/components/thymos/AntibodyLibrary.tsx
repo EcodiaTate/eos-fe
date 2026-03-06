@@ -2,6 +2,7 @@
 
 import { useApi } from "@/hooks/use-api";
 import { api, type AntibodyResponse } from "@/lib/api-client";
+import { THYMOS_STANDARD_POLL_MS } from "@/lib/polling-constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
@@ -9,7 +10,7 @@ import { useState } from "react";
 
 export function AntibodyLibrary() {
   const antibodies = useApi<AntibodyResponse[]>(api.thymosAntibodies, {
-    intervalMs: 3000,
+    intervalMs: THYMOS_STANDARD_POLL_MS,
   });
   const [filter, setFilter] = useState<"all" | "active" | "retired">("all");
   const [sortBy, setSortBy] = useState<"effectiveness" | "recent" | "usage">("effectiveness");

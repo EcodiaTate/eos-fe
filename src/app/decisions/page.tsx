@@ -20,20 +20,22 @@ export default function DecisionsPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
       <PageHeader
         title="Decisions"
         description="Nova→Equor→Axon — goals, beliefs, and action outcomes"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Action Pipeline */}
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 float-up float-up-1">
           <CardHeader>
-            <CardTitle>Action Pipeline</CardTitle>
-            <span className="text-[10px] text-white/20">
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: "600", color: "var(--ink)" }}>
+              ⚡ Action Pipeline
+            </CardTitle>
+            <div style={{ fontSize: "9px", color: "var(--ink-muted)", marginTop: "4px" }}>
               Nova→Equor→Axon · live execution outcomes
-            </span>
+            </div>
           </CardHeader>
           <CardContent>
             <DecisionStream />
@@ -41,77 +43,86 @@ export default function DecisionsPage() {
         </Card>
 
         {/* Goals */}
-        <Card>
+        <Card className="float-up float-up-2">
           <CardHeader>
-            <CardTitle>Goals</CardTitle>
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: "600", color: "var(--ink)" }}>
+              ◈ Goals
+            </CardTitle>
             {goals.data && (
-              <Badge variant="muted">{goals.data.total_active} active</Badge>
+              <div style={{ marginTop: "8px" }}>
+                <Badge variant="muted">{goals.data.total_active} active</Badge>
+              </div>
             )}
           </CardHeader>
           <CardContent>
             {goals.data ? (
               (goals.data.active_goals?.length ?? 0) > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {goals.data.active_goals.map((goal) => (
                     <div
                       key={goal.id}
-                      className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
+                      style={{
+                        borderRadius: "7px",
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        padding: "12px",
+                      }}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="text-sm text-white/70">
+                        <div style={{ fontSize: "13px", color: "var(--ink)", fontFamily: "var(--font-body)" }}>
                           {goal.description}
                         </div>
                         <Badge
-                          variant={
-                            goal.status === "active" ? "success" : "muted"
-                          }
+                          variant={goal.status === "active" ? "success" : "muted"}
                         >
                           {goal.status}
                         </Badge>
                       </div>
-                      <div className="mt-2 flex items-center gap-3">
-                        <div className="flex-1 h-1.5 rounded-full bg-white/[0.05]">
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="flex-1" style={{ height: "6px", borderRadius: "3px", background: "var(--border)" }}>
                           <div
-                            className="h-full rounded-full bg-teal-400/60 transition-all"
-                            style={{ width: `${goal.progress * 100}%` }}
+                            className="bar-fill"
+                            style={{
+                              width: `${goal.progress * 100}%`,
+                              background: "var(--lime)",
+                              height: "100%",
+                              borderRadius: "3px",
+                              transition: "width 300ms ease-out",
+                            }}
                           />
                         </div>
-                        <div className="text-[10px] text-white/30 tabular-nums">
+                        <div style={{ fontSize: "9px", color: "var(--ink-muted)", fontFamily: "var(--font-body)" }}>
                           {(goal.progress * 100).toFixed(0)}%
                         </div>
                       </div>
-                      <div className="mt-1.5 flex gap-2">
-                        <span className="text-[10px] text-white/20">
-                          src: {goal.source}
-                        </span>
-                        <span className="text-[10px] text-white/20">
-                          pri: {goal.priority.toFixed(2)}
-                        </span>
-                        <span className="text-[10px] text-white/20">
-                          urg: {goal.urgency.toFixed(2)}
-                        </span>
+                      <div className="mt-2 flex gap-3 text-[9px]" style={{ color: "var(--ink-muted)", fontFamily: "var(--font-body)" }}>
+                        <span>src: {goal.source}</span>
+                        <span>pri: {goal.priority.toFixed(2)}</span>
+                        <span>urg: {goal.urgency.toFixed(2)}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="flex flex-col items-center py-8 text-center">
-                  <div className="text-2xl opacity-10 mb-2">~</div>
-                  <div className="text-xs text-white/25">
+                  <div style={{ fontSize: "24px", opacity: 0.1, marginBottom: "8px" }}>~</div>
+                  <div style={{ fontSize: "12px", color: "var(--ink-muted)" }}>
                     No goals. Nova has nothing to optimize for.
                   </div>
                 </div>
               )
             ) : (
-              <div className="text-sm text-white/20">Loading...</div>
+              <div style={{ fontSize: "13px", color: "var(--ink-soft)" }}>Loading...</div>
             )}
           </CardContent>
         </Card>
 
         {/* Beliefs */}
-        <Card>
+        <Card className="float-up float-up-3">
           <CardHeader>
-            <CardTitle>Belief State</CardTitle>
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: "600", color: "var(--ink)" }}>
+              ◑ Belief State
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {beliefs.data ? (
@@ -123,61 +134,75 @@ export default function DecisionsPage() {
                     { label: "Entities Known", value: beliefs.data.entity_count.toString() },
                     { label: "Individuals Known", value: beliefs.data.individual_count.toString() },
                   ].map((m) => (
-                    <div key={m.label}>
-                      <div className="text-[10px] text-white/25">{m.label}</div>
-                      <div className="text-sm text-white/70 tabular-nums font-medium">
+                    <div
+                      key={m.label}
+                      style={{
+                        background: "var(--bg)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "7px",
+                        padding: "9px",
+                      }}
+                    >
+                      <div style={{ fontSize: "9px", color: "var(--ink-strong)", fontFamily: "var(--font-body)", fontWeight: "600", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "4px" }}>
+                        {m.label}
+                      </div>
+                      <div style={{ fontSize: "14px", color: "var(--ink)", fontFamily: "var(--font-body)", fontWeight: "600" }}>
                         {m.value}
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-white/[0.06] pt-3">
-                  <div className="text-[10px] text-white/20 uppercase tracking-widest mb-2">
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "12px" }}>
+                  <div style={{ fontSize: "9px", color: "var(--ink-strong)", fontFamily: "var(--font-body)", fontWeight: "600", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "8px" }}>
                     Self Model
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <div className="text-[10px] text-white/25">
+                      <div style={{ fontSize: "9px", color: "var(--ink-soft)", marginBottom: "4px" }}>
                         Epistemic Confidence
                       </div>
-                      <div className="text-sm text-white/70 tabular-nums">
-                        {beliefs.data.self_belief?.epistemic_confidence?.toFixed(3) ?? '–'}
+                      <div style={{ fontSize: "13px", color: "var(--ink)", fontFamily: "var(--font-body)" }}>
+                        {beliefs.data.self_belief?.epistemic_confidence?.toFixed(3) ?? "–"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-white/25">
+                      <div style={{ fontSize: "9px", color: "var(--ink-soft)", marginBottom: "4px" }}>
                         Cognitive Load
                       </div>
-                      <div className="text-sm text-white/70 tabular-nums">
-                        {beliefs.data.self_belief?.cognitive_load?.toFixed(3) ?? '–'}
+                      <div style={{ fontSize: "13px", color: "var(--ink)", fontFamily: "var(--font-body)" }}>
+                        {beliefs.data.self_belief?.cognitive_load?.toFixed(3) ?? "–"}
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {beliefs.data.context?.summary && (
-                  <div className="border-t border-white/[0.06] pt-3">
-                    <div className="text-[10px] text-white/20 uppercase tracking-widest mb-1">
+                  <div style={{ borderTop: "1px solid var(--border)", paddingTop: "12px" }}>
+                    <div style={{ fontSize: "9px", color: "var(--ink-strong)", fontFamily: "var(--font-body)", fontWeight: "600", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
                       Situation
                     </div>
-                    <div className="text-xs text-white/50">
+                    <div style={{ fontSize: "12px", color: "var(--ink-soft)", fontFamily: "var(--font-prose)" }}>
                       {beliefs.data.context.summary}
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-sm text-white/20">Loading...</div>
+              <div style={{ fontSize: "13px", color: "var(--ink-soft)" }}>Loading...</div>
             )}
           </CardContent>
         </Card>
 
         {/* Personality */}
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 float-up float-up-4">
           <CardHeader>
-            <CardTitle>Personality Vector</CardTitle>
-            <span className="text-[10px] text-white/20">Voxis expression personality</span>
+            <CardTitle style={{ fontFamily: "var(--font-display)", fontSize: "12px", fontWeight: "600", color: "var(--ink)" }}>
+              ↑ Personality Vector
+            </CardTitle>
+            <div style={{ fontSize: "9px", color: "var(--ink-muted)", marginTop: "4px" }}>
+              Voxis expression personality
+            </div>
           </CardHeader>
           <CardContent>
             {personality.data ? (
@@ -195,16 +220,24 @@ export default function DecisionsPage() {
                     { label: "Metaphor Use", value: personality.data.metaphor_use },
                   ].map((p) => (
                     <div key={p.label}>
-                      <div className="flex items-baseline justify-between mb-1">
-                        <span className="text-xs text-white/40">{p.label}</span>
-                        <span className="text-xs text-white/30 tabular-nums">
+                      <div className="flex items-baseline justify-between mb-2">
+                        <span style={{ fontSize: "9px", color: "var(--ink-soft)", fontFamily: "var(--font-body)" }}>
+                          {p.label}
+                        </span>
+                        <span style={{ fontSize: "11px", color: "var(--ink-muted)", fontFamily: "var(--font-body)", fontWeight: "600" }}>
                           {p.value.toFixed(2)}
                         </span>
                       </div>
-                      <div className="h-1.5 w-full rounded-full bg-white/[0.05]">
+                      <div className="bar-track" style={{ height: "5px", borderRadius: "2px", background: "var(--border)" }}>
                         <div
-                          className="h-full rounded-full bg-indigo-400/50 transition-all duration-500"
-                          style={{ width: `${p.value * 100}%` }}
+                          className="bar-fill"
+                          style={{
+                            width: `${p.value * 100}%`,
+                            background: "var(--lime)",
+                            height: "100%",
+                            borderRadius: "2px",
+                            transition: "width 500ms ease-out",
+                          }}
                         />
                       </div>
                     </div>
@@ -213,7 +246,7 @@ export default function DecisionsPage() {
 
                 {((personality.data.vocabulary_affinities?.length ?? 0) > 0 ||
                   (personality.data.thematic_references?.length ?? 0) > 0) && (
-                  <div className="border-t border-white/[0.06] pt-3 flex flex-wrap gap-1.5">
+                  <div style={{ borderTop: "1px solid var(--border)", paddingTop: "12px" }} className="flex flex-wrap gap-2">
                     {personality.data.vocabulary_affinities.map((w) => (
                       <Badge key={w} variant="info">
                         {w}
@@ -229,15 +262,24 @@ export default function DecisionsPage() {
 
                 {personality.data.warmth === 0 &&
                   personality.data.directness === 0 && (
-                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-400">
-                      All personality values are zero. The seed may not have
-                      initialized personality, or the birth process did not set
-                      personality traits. Aurora has no voice character.
+                    <div style={{
+                      borderRadius: "7px",
+                      border: "1px solid var(--gold-bright)",
+                      background: "var(--gold-bright)",
+                      backgroundOpacity: "0.08",
+                      padding: "12px",
+                      fontSize: "12px",
+                      color: "var(--gold-bright)",
+                      fontFamily: "var(--font-body)",
+                    }}>
+                      All personality values are zero. The seed may not have initialized
+                      personality, or the birth process did not set personality traits. Aurora
+                      has no voice character.
                     </div>
                   )}
               </div>
             ) : (
-              <div className="text-sm text-white/20">Loading...</div>
+              <div style={{ fontSize: "13px", color: "var(--ink-soft)" }}>Loading...</div>
             )}
           </CardContent>
         </Card>

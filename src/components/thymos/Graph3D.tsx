@@ -4,11 +4,12 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Sphere, Line } from "@react-three/drei";
 import { useRef, useMemo, useState } from "react";
 import * as THREE from "three";
-import { type IncidentResponse } from "@/lib/api-client";
+import { type IncidentResponse, type CausalEdge } from "@/lib/api-client";
 
 interface Graph3DProps {
   systems: string[];
   incidents: IncidentResponse[];
+  edges?: CausalEdge[];
 }
 
 function SystemNode({
@@ -36,11 +37,15 @@ function SystemNode({
 
   const size = 0.3 + (count / 20) * 0.5;
   const color =
-    severity >= 5 ? "#ef4444" :
-    severity >= 4 ? "#f97316" :
-    severity >= 3 ? "#eab308" :
-    severity >= 2 ? "#3b82f6" :
-    "#06b6d4";
+    severity >= 5
+      ? "#ef4444"
+      : severity >= 4
+      ? "#f97316"
+      : severity >= 3
+      ? "#eab308"
+      : severity >= 2
+      ? "#3b82f6"
+      : "#06b6d4";
 
   return (
     <group position={position}>
@@ -50,7 +55,11 @@ function SystemNode({
         onPointerEnter={() => setHover(true)}
         onPointerLeave={() => setHover(false)}
       >
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={hover ? 0.8 : 0.3} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={hover ? 0.8 : 0.3}
+        />
       </Sphere>
     </group>
   );
@@ -73,9 +82,9 @@ function IncidentParticle({
       meshRef.current.position.x = position[0] + direction[0] * t * 2;
       meshRef.current.position.y = position[1] + direction[1] * t * 2;
       meshRef.current.position.z = position[2] + direction[2] * t * 2;
-      const material = meshRef.current.material as THREE.Material;
-      if (material && "opacity" in material) {
-        (material as any).opacity = 1 - t;
+      const material = meshRef.current.material as THREE.MeshStandardMaterial;
+      if (material) {
+        material.opacity = 1 - t;
       }
     }
   });
@@ -96,8 +105,7 @@ function IncidentParticle({
   );
 }
 
-function Scene({ systems, incidents }: Graph3DProps) {
-  // Position systems in a circle
+function Scene({ systems, incidents, edges = [] }: Graph3DProps) {
   const systemPositions = useMemo(() => {
     const positions: Record<string, [number, number, number]> = {};
     const radius = 4;
@@ -112,17 +120,13 @@ function Scene({ systems, incidents }: Graph3DProps) {
     return positions;
   }, [systems]);
 
-  // Count incidents per system and get max severity
   const systemStats = useMemo(() => {
-    const stats: Record<
-      string,
-      { count: number; maxSeverity: number }
-    > = {};
+    const stats: Record<string, { count: number; maxSeverity: number }> = {};
     systems.forEach((sys) => {
       stats[sys] = { count: 0, maxSeverity: 0 };
     });
 
-    const severityMap = {
+    const severityMap: Record<string, number> = {
       CRITICAL: 5,
       HIGH: 4,
       MEDIUM: 3,
@@ -133,22 +137,20 @@ function Scene({ systems, incidents }: Graph3DProps) {
     incidents.forEach((inc) => {
       if (stats[inc.source_system]) {
         stats[inc.source_system].count += 1;
-        const sev = severityMap[inc.severity as keyof typeof severityMap] || 0;
+        const sev = severityMap[inc.severity] ?? 0;
         stats[inc.source_system].maxSeverity = Math.max(
           stats[inc.source_system].maxSeverity,
           sev
         );
       }
     });
-
     return stats;
   }, [systems, incidents]);
 
-  // Sample particles for visualization
   const particles = useMemo(() => {
     return incidents.slice(0, 20).map((inc, idx) => {
-      const fromPos = systemPositions[inc.source_system] || [0, 0, 0];
-      const toPos = systemPositions[systems[idx % systems.length]] || [0, 0, 0];
+      const fromPos = systemPositions[inc.source_system] ?? [0, 0, 0];
+      const toPos = systemPositions[systems[idx % systems.length]] ?? [0, 0, 0];
       const direction: [number, number, number] = [
         (toPos[0] - fromPos[0]) * 0.5,
         (toPos[1] - fromPos[1]) * 0.5,
@@ -156,12 +158,39 @@ function Scene({ systems, incidents }: Graph3DProps) {
       ];
       return {
         key: `${inc.id}-${idx}`,
-        position: fromPos,
+        position: fromPos as [number, number, number],
         severity: inc.severity,
         direction,
       };
     });
   }, [incidents, systemPositions, systems]);
+
+  // Build dependency edge lines from real edges prop
+  const dependencyLines = useMemo(() => {
+    return edges
+      .filter((e) => systemPositions[e.source] && systemPositions[e.target])
+      .map((e, idx) => ({
+        key: `edge-${e.source}-${e.target}-${idx}`,
+        from: systemPositions[e.source],
+        to: systemPositions[e.target],
+      }));
+  }, [edges, systemPositions]);
+
+  // Fallback: incident co-occurrence edges when no real edges provided
+  const fallbackLines = useMemo(() => {
+    if (edges.length > 0) return [];
+    return systems.flatMap((sys1, idx1) =>
+      systems.slice(idx1 + 1).flatMap((sys2) => {
+        const incCount = incidents.filter(
+          (i) => i.source_system === sys1 || i.source_system === sys2
+        ).length;
+        if (incCount === 0 || !systemPositions[sys1] || !systemPositions[sys2]) return [];
+        return [{ key: `fallback-${sys1}-${sys2}`, from: systemPositions[sys1], to: systemPositions[sys2] }];
+      })
+    );
+  }, [systems, incidents, systemPositions, edges]);
+
+  const allLines = dependencyLines.length > 0 ? dependencyLines : fallbackLines;
 
   return (
     <>
@@ -169,38 +198,26 @@ function Scene({ systems, incidents }: Graph3DProps) {
       <pointLight position={[10, 10, 10]} intensity={1} />
       <pointLight position={[-10, -10, -10]} intensity={0.5} />
 
-      {/* System nodes */}
       {systems.map((sys) => (
         <SystemNode
           key={sys}
-          position={systemPositions[sys]}
+          position={systemPositions[sys] ?? [0, 0, 0]}
           label={sys}
-          count={systemStats[sys].count}
-          severity={systemStats[sys].maxSeverity}
+          count={systemStats[sys]?.count ?? 0}
+          severity={systemStats[sys]?.maxSeverity ?? 0}
         />
       ))}
 
-      {/* Connections between systems */}
-      {systems.map((sys1, idx1) =>
-        systems.slice(idx1 + 1).map((sys2) => {
-          const incBetween = incidents.filter(
-            (i) => (i.source_system === sys1 && sys2) || i.source_system === sys2
-          ).length;
-          if (incBetween === 0) return null;
+      {allLines.map((line) => (
+        <Line
+          key={line.key}
+          points={[line.from, line.to]}
+          color={dependencyLines.length > 0 ? "#0e7490" : "#475569"}
+          lineWidth={dependencyLines.length > 0 ? 1.5 : 0.5}
+          dashed={false}
+        />
+      ))}
 
-          return (
-            <Line
-              key={`${sys1}-${sys2}`}
-              points={[systemPositions[sys1], systemPositions[sys2]]}
-              color="#475569"
-              lineWidth={0.5}
-              dashed={false}
-            />
-          );
-        })
-      )}
-
-      {/* Incident particles */}
       {particles.map((p) => (
         <IncidentParticle
           key={p.key}
@@ -215,14 +232,14 @@ function Scene({ systems, incidents }: Graph3DProps) {
   );
 }
 
-export default function Graph3D({ systems, incidents }: Graph3DProps) {
+export default function Graph3D({ systems, incidents, edges = [] }: Graph3DProps) {
   return (
     <Canvas
       camera={{ position: [0, 0, 10], fov: 50 }}
       style={{ width: "100%", height: "100%" }}
     >
       <color attach="background" args={["#1e293b"]} />
-      <Scene systems={systems} incidents={incidents} />
+      <Scene systems={systems} incidents={incidents} edges={edges} />
     </Canvas>
   );
 }
